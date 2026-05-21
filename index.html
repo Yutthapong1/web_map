@@ -1,0 +1,1348 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Indoor Map Studio Pro</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+    <style>
+        :root {
+            --primary: #1e88e5;
+            --primary-dark: #1565c0;
+            --bg-light: #f8f9fa;
+            --normal-color: #2e7d32;
+            --ramp-color: #00796b;
+            --stairs-color: #7b1fa2;
+            --elevator-color: #283593;
+            --delete-color: #e53935;
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            background-color: var(--bg-light);
+        }
+
+        #app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+        }
+
+        /* App Bar Style */
+        #app-bar {
+            background-color: #ffffff;
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            z-index: 1000;
+        }
+
+        #app-bar h2 {
+            margin: 0;
+            font-size: 20px;
+            color: var(--primary-dark);
+            font-weight: 600;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-import {
+            background-color: #64748b;
+            border: none;
+            padding: 10px 16px;
+            color: white;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn-import:hover {
+            background-color: #475569;
+        }
+
+        .btn-export {
+            background-color: #43a047;
+            border: none;
+            padding: 10px 20px;
+            color: white;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(67, 160, 71, 0.3);
+        }
+
+        .btn-export:hover {
+            background-color: #2e7d32;
+            transform: translateY(-1px);
+        }
+
+        /* Toolbar Choices */
+        #toolbar {
+            background-color: white;
+            padding: 12px;
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            border-bottom: 1px solid #eef2f5;
+            z-index: 1000;
+            flex-wrap: wrap;
+        }
+
+        .chip {
+            padding: 8px 18px;
+            border-radius: 20px;
+            border: 1px solid #e0e6ed;
+            background-color: white;
+            color: #64748b;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .chip:hover {
+            background-color: #f8fafc;
+        }
+
+        .chip.active[data-mode="addAndDrag"] {
+            background-color: #e3f2fd;
+            color: #0d47a1;
+            border-color: #1e88e5;
+        }
+
+        .chip.active[data-mode="connectLines"] {
+            background-color: #e8f5e9;
+            color: #1b5e20;
+            border-color: #43a047;
+        }
+
+        .chip.active[data-mode="deleteEdge"] {
+            background-color: #fff8e1;
+            color: #b78103;
+            border-color: #ffb300;
+        }
+
+        .chip.active[data-mode="delete"] {
+            background-color: #ffebee;
+            color: #c62828;
+            border-color: #e53935;
+        }
+
+        .chip.active[data-mode="calibrate"] {
+            background-color: #ecfdf5;
+            color: #047857;
+            border-color: #10b981;
+        }
+
+        .chip.active[data-mode="routing"] {
+            background-color: #eff6ff;
+            color: #1d4ed8;
+            border-color: #3b82f6;
+        }
+
+        /* Map Layout */
+        #map-wrapper {
+            flex: 1;
+            position: relative;
+            display: flex;
+        }
+
+        #map {
+            flex: 1;
+            height: 100%;
+            background-color: #f1f5f9;
+        }
+
+        /* Floating Modern Cards */
+        .editor-card {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 320px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            z-index: 1001;
+            display: none;
+            overflow: hidden;
+            animation: slideIn 0.2s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card-header {
+            background: #f8fafc;
+            padding: 14px 18px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-header h3 {
+            margin: 0;
+            font-size: 16px;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-header .btn-close {
+            background: none;
+            border: none;
+            font-size: 16px;
+            color: #94a3b8;
+            cursor: pointer;
+        }
+
+        .card-header .btn-close:hover {
+            color: #64748b;
+        }
+
+        .card-body {
+            padding: 18px;
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: #64748b;
+            margin-bottom: 6px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 14px;
+            box-sizing: border-box;
+            outline: none;
+            transition: border 0.2s;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary);
+        }
+
+        .row-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .card-footer {
+            padding: 12px 18px;
+            background: #f8fafc;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-secondary {
+            background: #e2e2e2;
+            color: #475569;
+        }
+
+        .btn-secondary:hover {
+            background: #cbd5e1;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        /* Legend Panel */
+        #legend {
+            position: absolute;
+            bottom: 80px;
+            left: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 12px;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            display: flex;
+            justify-content: space-around;
+            z-index: 1000;
+            font-size: 12px;
+            font-weight: 600;
+            color: #475569;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Tip Bar */
+        #tip-panel {
+            position: absolute;
+            bottom: 16px;
+            left: 20px;
+            right: 20px;
+            background: rgba(15, 23, 42, 0.85);
+            color: #f8fafc;
+            padding: 10px 16px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 12px;
+            z-index: 1000;
+            pointer-events: none;
+            backdrop-filter: blur(4px);
+        }
+
+        .custom-node-html {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .node-label {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-size: 9px;
+            font-weight: bold;
+            white-space: nowrap;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-top: 4px;
+            line-height: 1.2;
+            border: 1px solid #cbd5e1;
+        }
+
+        /* Scale Badge Style */
+        #scale-badge {
+            background-color: #f1f5f9;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #334155;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid #e2e8f0;
+            transition: all 0.3s ease;
+        }
+
+        #scale-badge.calibrated {
+            background-color: #ecfdf5;
+            border-color: #a7f3d0;
+            color: #065f46;
+        }
+
+        /* Custom Leaflet Tooltip for edges */
+        .edge-tooltip {
+            background-color: rgba(15, 23, 42, 0.9) !important;
+            color: #f8fafc !important;
+            border: none !important;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15) !important;
+            font-size: 11px !important;
+            font-weight: 600 !important;
+            border-radius: 6px !important;
+            padding: 4px 8px !important;
+        }
+
+        .edge-tooltip::before {
+            border-top-color: rgba(15, 23, 42, 0.9) !important;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            50% {
+                transform: scale(1.03);
+                opacity: 0.9;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .pulse-effect {
+            animation: pulse 1.8s infinite ease-in-out;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="app-container">
+        <div id="app-bar">
+            <h2
+                style="display: flex; align-items: center; gap: 12px; margin: 0; font-size: 20px; color: var(--primary-dark); font-weight: 600;">
+                <i class="fa-solid fa-map-location-dot"></i> Indoor Map Studio Pro
+                <div id="scale-badge">
+                    <i class="fa-solid fa-ruler-combined"></i> <span id="scale-badge-text">ยังไม่ได้คาลิเบรต (1.00
+                        ม./หน่วย)</span>
+                </div>
+            </h2>
+            <div class="action-buttons">
+                <input type="file" id="json-file-input" accept=".json" style="display: none;"
+                    onchange="importFromJsonFile(event)">
+                <button class="btn-import" onclick="document.getElementById('json-file-input').click()"><i
+                        class="fa-solid fa-file-import"></i> Import JSON</button>
+                <button class="btn-export" onclick="exportToJsonFile()"><i class="fa-solid fa-file-arrow-down"></i>
+                    Export JSON</button>
+            </div>
+        </div>
+
+        <div id="toolbar">
+            <div class="chip active" data-mode="addAndDrag" onclick="setMode('addAndDrag')">
+                <i class="fa-solid fa-location-dot"></i> วาง/ลากโหนด
+            </div>
+            <div class="chip" data-mode="connectLines" onclick="setMode('connectLines')">
+                <i class="fa-solid fa-route"></i> เชื่อมเส้นทาง
+            </div>
+            <div class="chip" data-mode="deleteEdge" onclick="setMode('deleteEdge')">
+                <i class="fa-solid fa-scissors" style="color: #ffb300;"></i> <span
+                    style="color: #b78103;">ลบเส้นเชื่อม</span>
+            </div>
+            <div class="chip" data-mode="delete" onclick="setMode('delete')">
+                <i class="fa-solid fa-eraser" style="color: red;"></i> <span style="color: red;">ลบโหนด</span>
+            </div>
+            <div class="chip" data-mode="calibrate" onclick="setMode('calibrate')">
+                <i class="fa-solid fa-ruler-combined" style="color: #10b981;"></i> <span
+                    style="color: #047857;">กำหนดสเกล</span>
+            </div>
+            <div class="chip" data-mode="routing" onclick="setMode('routing')">
+                <i class="fa-solid fa-diamond-turn-right" style="color: #3b82f6;"></i> <span
+                    style="color: #1d4ed8;">ทดสอบค้นหาเส้นทาง</span>
+            </div>
+        </div>
+
+        <div id="map-wrapper">
+            <div id="map"></div>
+
+            <div id="create-node-card" class="editor-card">
+                <div class="card-header">
+                    <h3><i class="fa-solid fa-circle-plus" style="color: var(--primary);"></i> เพิ่มโหนดใหม่</h3>
+                    <button class="btn-close" onclick="closeEditorCards()">&times;</button>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label>ชื่อห้อง / จุดทางเดิน</label>
+                        <input type="text" id="new-node-name" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>ประเภทโหนด</label>
+                        <select id="new-node-type" class="form-control">
+                            <option value="normal">โหนดปกติ</option>
+                            <option value="ramp">โหนดทางลาด</option>
+                            <option value="stairs">โหนดบันได</option>
+                            <option value="elevator">โหนดลิฟต์</option>
+                        </select>
+                    </div>
+                    <div class="row-grid">
+                        <div class="form-group">
+                            <label>พิกัด X</label>
+                            <input type="text" id="new-node-x" class="form-control" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label>พิกัด Y</label>
+                            <input type="text" id="new-node-y" class="form-control" readonly>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-secondary" onclick="closeEditorCards()">ยกเลิก</button>
+                    <button class="btn btn-primary" onclick="saveNewNode()">สร้างโหนด</button>
+                </div>
+            </div>
+
+            <div id="edit-node-card" class="editor-card">
+                <div class="card-header">
+                    <h3><i class="fa-solid fa-pen-to-square" style="color: #ffa000;"></i> แก้ไขข้อมูลโหนด</h3>
+                    <button class="btn-close" onclick="closeEditorCards()">&times;</button>
+                </div>
+                <div class="card-body">
+                    <input type="hidden" id="edit-node-id">
+                    <div class="form-group">
+                        <label>ชื่อห้อง / จุดทางเดิน</label>
+                        <input type="text" id="edit-node-name" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>ประเภทโหนด</label>
+                        <select id="edit-node-type" class="form-control">
+                            <option value="normal">โหนดปกติ</option>
+                            <option value="ramp">โหนดทางลาด</option>
+                            <option value="stairs">โหนดบันได</option>
+                            <option value="elevator">โหนดลิฟต์</option>
+                        </select>
+                    </div>
+                    <div class="row-grid">
+                        <div class="form-group">
+                            <label>พิกัด X (0-100)</label>
+                            <input type="number" step="0.1" id="edit-node-x" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>พิกัด Y (0-50)</label>
+                            <input type="number" step="0.1" id="edit-node-y" class="form-control">
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-secondary" onclick="closeEditorCards()">ยกเลิก</button>
+                    <button class="btn btn-primary" onclick="updateNodeDetails()">บันทึก</button>
+                </div>
+            </div>
+
+            <div id="calibration-card" class="editor-card">
+                <div class="card-header">
+                    <h3><i class="fa-solid fa-ruler-combined" style="color: #10b981;"></i> กำหนดสเกลแผนที่</h3>
+                    <button class="btn-close" onclick="closeEditorCards()">&times;</button>
+                </div>
+                <div class="card-body">
+                    <div id="calib-step-1"
+                        style="font-size: 13px; color: #475569; text-align: center; padding: 10px 0; line-height: 1.6;">
+                        <i class="fa-solid fa-circle-info"
+                            style="color: #1e88e5; font-size: 20px; margin-bottom: 8px;"></i><br>
+                        กรุณาคลิกเลือกจุด 2 จุดบนแผนที่<br>หรือลากธงสีแดง/เขียวเพื่อสร้างระยะอ้างอิง
+                    </div>
+                    <div id="calib-step-2" style="display: none;">
+                        <div class="row-grid" style="margin-bottom: 12px; font-size: 12px;">
+                            <div><strong>จุดเริ่มต้น:</strong> <span id="calib-start-coords" style="color: #d32f2f;">(0,
+                                    0)</span></div>
+                            <div><strong>จุดปลายทาง:</strong> <span id="calib-end-coords" style="color: #2e7d32;">(0,
+                                    0)</span></div>
+                        </div>
+                        <div class="form-group">
+                            <label>ระยะห่างในหน่วยแผนที่ (Map Units)</label>
+                            <input type="text" id="calib-map-dist" class="form-control" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label>ระยะทางจริงทางกายภาพ (เมตร)</label>
+                            <input type="number" step="0.1" min="0.1" id="calib-real-dist" class="form-control"
+                                placeholder="เช่น 5 หรือ 10" oninput="calculateAndDisplayMetersPerUnit()">
+                        </div>
+                        <div
+                            style="background-color: #f8fafc; padding: 10px; border-radius: 6px; border: 1px dashed #cbd5e1; font-size: 12px; text-align: center; color: #1e293b;">
+                            สเกลที่ได้: <strong id="calib-calculated-scale"
+                                style="color: #10b981; font-size: 14px;">1.000</strong> เมตร/หน่วยแผนที่
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-secondary" onclick="resetCalibration()">รีเซ็ต</button>
+                    <button class="btn btn-primary" id="btn-save-calibration" onclick="saveCalibration()"
+                        disabled>บันทึกสเกล</button>
+                </div>
+            </div>
+
+            <div id="routing-card" class="editor-card">
+                <div class="card-header">
+                    <h3><i class="fa-solid fa-diamond-turn-right" style="color: #3b82f6;"></i> ค้นหาเส้นทางเดิน</h3>
+                    <button class="btn-close" onclick="closeRouting()">&times;</button>
+                </div>
+                <div class="card-body">
+                    <div id="route-info-detail" style="font-size: 14px; color: #334155; line-height: 1.5;">
+                        คลิกเลือกโหนดเริ่มต้นและโหนดปลายทางบนแผนที่เพื่อคำนวณเส้นทาง
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-secondary" onclick="clearRouting()">ล้างเส้นทาง</button>
+                </div>
+            </div>
+
+            <div id="legend">
+                <div class="legend-item"><i class="fa-solid fa-circle" style="color: var(--normal-color);"></i> ปกติ
+                </div>
+                <div class="legend-item"><i class="fa-solid fa-wheelchair" style="color: var(--ramp-color);"></i> ทางลาด
+                </div>
+                <div class="legend-item"><i class="fa-solid fa-stairs" style="color: var(--stairs-color);"></i> บันได
+                </div>
+                <div class="legend-item"><i class="fa-solid fa-elevator" style="color: var(--elevator-color);"></i>
+                    ลิฟต์</div>
+                <div class="legend-item"><i class="fa-solid fa-star" style="color: var(--primary);"></i> ตำแหน่งปัจจุบัน
+                </div>
+            </div>
+
+            <div id="tip-panel">
+                💡 วิธีใช้: สามารถกดปุ่ม Import JSON เพื่อดึงไฟล์แผนที่เดิมกลับเข้ามาแก้ไขต่อได้เลยทันที
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        const MAP_HEIGHT = 50;
+        const MAP_WIDTH = 100;
+
+        let customNodes = {};
+        let customEdges = [];
+        let markersMap = {};
+        let polylinesArray = [];
+
+        let currentMode = 'addAndDrag';
+        let selectedNodeForEdge = null;
+        let myLocationNodeId = null;
+
+        let metersPerUnit = 1.0;
+        let isCalibrated = false;
+
+        // Calibration state
+        let calibrationPoints = [];
+        let calibrationTempMarkerStart = null;
+        let calibrationTempMarkerEnd = null;
+        let calibrationTempLine = null;
+
+        // Routing state
+        let routingStartNodeId = null;
+        let routingEndNodeId = null;
+
+        // ตั้งค่า Leaflet Map
+        const map = L.map('map', {
+            crs: L.CRS.Simple,
+            minZoom: 3,
+            maxZoom: 7,
+            attributionControl: false
+        });
+
+        const bounds = [[0, 0], [MAP_HEIGHT, MAP_WIDTH]];
+        L.imageOverlay('assets/images/floor_plan.png', bounds).addTo(map);
+        map.setView([MAP_HEIGHT / 2, MAP_WIDTH / 2], 3);
+
+        function setMode(mode) {
+            currentMode = mode;
+            selectedNodeForEdge = null;
+
+            if (mode !== 'routing') {
+                clearRouting();
+            }
+
+            closeEditorCards();
+
+            document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+            const activeChip = document.querySelector(`.chip[data-mode="${mode}"]`);
+            if (activeChip) activeChip.classList.add('active');
+
+            if (mode === 'calibrate') {
+                document.getElementById('calibration-card').style.display = 'block';
+                showCalibrationCard(true);
+            }
+
+            renderAllElements();
+        }
+
+        function toLatLng(x, y) { return [MAP_HEIGHT - y, x]; }
+        function toXY(latlng) {
+            return {
+                x: parseFloat(latlng.lng.toFixed(1)),
+                y: parseFloat((MAP_HEIGHT - latlng.lat).toFixed(1))
+            };
+        }
+
+        function getNodeColor(type, id) {
+            if (currentMode === 'delete') return 'var(--delete-color)';
+            if (selectedNodeForEdge === id) return '#ff9800';
+            if (myLocationNodeId === id) return 'var(--primary)';
+            if (currentMode === 'routing') {
+                if (routingStartNodeId === id) return '#3b82f6';
+                if (routingEndNodeId === id) return '#10b981';
+            }
+
+            switch (type) {
+                case 'ramp': return 'var(--ramp-color)';
+                case 'stairs': return 'var(--stairs-color)';
+                case 'elevator': return 'var(--elevator-color)';
+                case 'normal':
+                default: return 'var(--normal-color)';
+            }
+        }
+
+        function getNodeIconHtml(type, id) {
+            let iconClass = 'fa-circle';
+            if (myLocationNodeId === id && currentMode !== 'delete') iconClass = 'fa-star';
+            else if (currentMode === 'routing' && routingStartNodeId === id) iconClass = 'fa-circle-dot';
+            else if (currentMode === 'routing' && routingEndNodeId === id) iconClass = 'fa-flag-checkered';
+            else {
+                if (type === 'ramp') iconClass = 'fa-wheelchair';
+                else if (type === 'stairs') iconClass = 'fa-stairs';
+                else if (type === 'elevator') iconClass = 'fa-elevator';
+            }
+            return `<i class="fa-solid ${iconClass}" style="color: ${getNodeColor(type, id)}; font-size: 16px;"></i>`;
+        }
+
+        function importFromJsonFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+
+                    if (importedData.nodes && importedData.raw_edges) {
+                        customNodes = importedData.nodes;
+                        customEdges = importedData.raw_edges;
+
+                        if (importedData.metersPerUnit !== undefined) {
+                            metersPerUnit = parseFloat(importedData.metersPerUnit) || 1.0;
+                            isCalibrated = true;
+                        } else {
+                            metersPerUnit = 1.0;
+                            isCalibrated = false;
+                        }
+                        updateScaleBadge();
+
+                        closeEditorCards();
+                        renderAllElements();
+                    } else {
+                        alert("รูปแบบไฟล์ JSON ไม่ถูกต้อง");
+                    }
+                } catch (err) {
+                    alert("ไม่สามารถอ่านไฟล์ JSON นี้ได้");
+                }
+            };
+            reader.readAsText(file);
+
+            event.target.value = '';
+        }
+
+        function deleteEdgeByIndex(index) {
+            customEdges.splice(index, 1);
+            renderAllElements();
+        }
+
+        function renderAllElements() {
+            Object.values(markersMap).forEach(m => map.removeLayer(m));
+            polylinesArray.forEach(p => map.removeLayer(p));
+            markersMap = {};
+            polylinesArray = [];
+
+            // วาดเส้นเชื่อม (Edges)
+            customEdges.forEach((edge, index) => {
+                const fromNode = customNodes[edge.fromId];
+                const toNode = customNodes[edge.toId];
+                if (fromNode && toNode) {
+                    const isDeleteMode = (currentMode === 'deleteEdge');
+
+                    const polyline = L.polyline([
+                        toLatLng(fromNode.x, fromNode.y),
+                        toLatLng(toNode.x, toNode.y)
+                    ], {
+                        color: isDeleteMode ? '#f57c00' : '#475569',
+                        weight: isDeleteMode ? 5 : 3,
+                        opacity: 0.8
+                    }).addTo(map);
+
+                    const distUnits = Math.sqrt((toNode.x - fromNode.x) ** 2 + (toNode.y - fromNode.y) ** 2);
+                    const distMeters = distUnits * metersPerUnit;
+                    const tooltipText = `${distMeters.toFixed(2)} ม. (${distUnits.toFixed(1)} unit)`;
+
+                    polyline.bindTooltip(tooltipText, {
+                        sticky: true,
+                        className: 'edge-tooltip'
+                    });
+
+                    polyline.on('click', (e) => {
+                        if (currentMode === 'deleteEdge') {
+                            L.DomEvent.stopPropagation(e);
+                            deleteEdgeByIndex(index);
+                        }
+                    });
+
+                    polylinesArray.push(polyline);
+                }
+            });
+
+            // วาดหมุด (Markers)
+            Object.keys(customNodes).forEach(key => {
+                const node = customNodes[key];
+                const pos = toLatLng(node.x, node.y);
+
+                const customIcon = L.divIcon({
+                    className: 'custom-marker-wrapper',
+                    html: `
+                    <div class="custom-node-html">
+                        ${getNodeIconHtml(node.type, node.id)}
+                        <div class="node-label" style="border-top: 3px solid ${getNodeColor(node.type, node.id)}">
+                            ${node.name}<br>(${node.x}, ${node.y})
+                        </div>
+                    </div>
+                `,
+                    iconSize: [70, 45],
+                    iconAnchor: [35, 8]
+                });
+
+                const marker = L.marker(pos, { icon: customIcon, draggable: (currentMode === 'addAndDrag') }).addTo(map);
+                markersMap[node.id] = marker;
+
+                marker.on('click', (e) => {
+                    L.DomEvent.stopPropagation(e);
+                    handleNodeClick(node);
+                });
+
+                marker.on('contextmenu', (e) => {
+                    L.DomEvent.stopPropagation(e);
+                    myLocationNodeId = node.id;
+                    renderAllElements();
+                });
+
+                marker.on('dragend', (event) => {
+                    const newPos = event.target.getLatLng();
+                    const coords = toXY(newPos);
+                    node.x = Math.max(0, Math.min(MAP_WIDTH, coords.x));
+                    node.y = Math.max(0, Math.min(MAP_HEIGHT, coords.y));
+
+                    if (document.getElementById('edit-node-card').style.display === 'block' &&
+                        document.getElementById('edit-node-id').value === node.id) {
+                        document.getElementById('edit-node-x').value = node.x;
+                        document.getElementById('edit-node-y').value = node.y;
+                    }
+                    renderAllElements();
+                });
+            });
+
+            // วาดเส้นทางคำนวณ Dijkstra
+            const routeCard = document.getElementById('routing-card');
+            const routeInfo = document.getElementById('route-info-detail');
+
+            if (routingStartNodeId && routingEndNodeId) {
+                const routeResult = findShortestPath(routingStartNodeId, routingEndNodeId);
+                if (routeResult) {
+                    const latlngs = routeResult.path.map(id => {
+                        const n = customNodes[id];
+                        return toLatLng(n.x, n.y);
+                    });
+
+                    const routePolyline = L.polyline(latlngs, {
+                        color: '#10b981',
+                        weight: 6,
+                        opacity: 0.9,
+                        lineCap: 'round',
+                        lineJoin: 'round'
+                    }).addTo(map);
+
+                    polylinesArray.push(routePolyline);
+
+                    routeInfo.innerHTML = `
+                    <div style="margin-bottom: 8px;">
+                        <span style="background-color: #3b82f6; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: 6px;">ต้นทาง</span>
+                        <strong>${customNodes[routingStartNodeId].name}</strong>
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <span style="background-color: #10b981; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: 6px;">ปลายทาง</span>
+                        <strong>${customNodes[routingEndNodeId].name}</strong>
+                    </div>
+                    <div style="border-top: 1px solid #e2e8f0; padding-top: 10px; font-size: 16px; color: #10b981; font-weight: 800; display: flex; align-items: center; gap: 6px;" class="pulse-effect">
+                        <i class="fa-solid fa-walking"></i> ระยะทางรวม: ${routeResult.distanceMeters.toFixed(2)} เมตร
+                    </div>
+                    <div style="font-size: 11px; color: #64748b; margin-top: 4px;">
+                        (ระยะทางในแผนที่: ${routeResult.distanceUnits.toFixed(2)} units)
+                    </div>
+                `;
+                    routeCard.style.display = 'block';
+                } else {
+                    routeInfo.innerHTML = `
+                    <div style="margin-bottom: 8px;">
+                        <span style="background-color: #3b82f6; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: 6px;">ต้นทาง</span>
+                        <strong>${customNodes[routingStartNodeId].name}</strong>
+                    </div>
+                    <div style="margin-bottom: 8px;">
+                        <span style="background-color: #cbd5e1; color: #475569; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: 6px;">ปลายทาง</span>
+                        <strong>${customNodes[routingEndNodeId].name}</strong>
+                    </div>
+                    <div style="color: #ef4444; font-weight: bold; margin-top: 10px;">
+                        <i class="fa-solid fa-triangle-exclamation"></i> ไม่พบเส้นทางเชื่อมต่อกัน
+                    </div>
+                `;
+                    routeCard.style.display = 'block';
+                }
+            } else if (routingStartNodeId) {
+                routeInfo.innerHTML = `
+                <div style="margin-bottom: 8px;">
+                    <span style="background-color: #3b82f6; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: 6px;">ต้นทาง</span>
+                    <strong>${customNodes[routingStartNodeId].name}</strong>
+                </div>
+                <div style="color: #3b82f6; font-weight: bold; margin-top: 10px;" class="pulse-effect">
+                    <i class="fa-solid fa-circle-dot"></i> กรุณาเลือกจุดปลายทางบนแผนที่...
+                </div>
+            `;
+                routeCard.style.display = 'block';
+            } else {
+                if (currentMode === 'routing') {
+                    routeInfo.innerHTML = `
+                    <div style="text-align: center; color: #64748b; padding: 10px 0;">
+                        <i class="fa-solid fa-hand-pointer" style="font-size: 20px; color: #3b82f6; margin-bottom: 6px;"></i><br>
+                        กรุณาคลิกเลือกโหนดเริ่มต้นบนแผนที่
+                    </div>
+                `;
+                    routeCard.style.display = 'block';
+                } else {
+                    routeCard.style.display = 'none';
+                }
+            }
+        }
+
+        map.on('click', (e) => {
+            const coords = toXY(e.latlng);
+            if (coords.x < 0 || coords.x > MAP_WIDTH || coords.y < 0 || coords.y > MAP_HEIGHT) return;
+
+            if (currentMode === 'addAndDrag') {
+                openCreateCard(coords.x, coords.y);
+            } else if (currentMode === 'calibrate') {
+                handleCalibrationClick(coords.x, coords.y);
+            }
+        });
+
+        function closeEditorCards() {
+            document.getElementById('create-node-card').style.display = 'none';
+            document.getElementById('edit-node-card').style.display = 'none';
+            document.getElementById('calibration-card').style.display = 'none';
+
+            if (currentMode !== 'calibrate') {
+                resetCalibration();
+            }
+        }
+
+        function openCreateCard(x, y) {
+            closeEditorCards();
+            document.getElementById('new-node-name').value = `Node_${Object.keys(customNodes).length + 1}`;
+            document.getElementById('new-node-type').value = 'normal';
+            document.getElementById('new-node-x').value = x;
+            document.getElementById('new-node-y').value = y;
+            document.getElementById('create-node-card').style.display = 'block';
+            document.getElementById('new-node-name').focus();
+        }
+
+        function saveNewNode() {
+            const name = document.getElementById('new-node-name').value.trim();
+            const type = document.getElementById('new-node-type').value;
+            const x = parseFloat(document.getElementById('new-node-x').value);
+            const y = parseFloat(document.getElementById('new-node-y').value);
+
+            if (!name) return;
+
+            const newId = `node_${Date.now()}`;
+            customNodes[newId] = { id: newId, name: name, x: x, y: y, type: type };
+            closeEditorCards();
+            renderAllElements();
+        }
+
+        function openEditCard(node) {
+            closeEditorCards();
+            document.getElementById('edit-node-id').value = node.id;
+            document.getElementById('edit-node-name').value = node.name;
+            document.getElementById('edit-node-type').value = node.type;
+            document.getElementById('edit-node-x').value = node.x;
+            document.getElementById('edit-node-y').value = node.y;
+            document.getElementById('edit-node-card').style.display = 'block';
+        }
+
+        function updateNodeDetails() {
+            const id = document.getElementById('edit-node-id').value;
+            const name = document.getElementById('edit-node-name').value.trim();
+            const type = document.getElementById('edit-node-type').value;
+            const x = parseFloat(document.getElementById('edit-node-x').value);
+            const y = parseFloat(document.getElementById('edit-node-y').value);
+
+            if (!name || isNaN(x) || isNaN(y)) return;
+
+            if (customNodes[id]) {
+                customNodes[id].name = name;
+                customNodes[id].type = type;
+                customNodes[id].x = Math.max(0, Math.min(MAP_WIDTH, x));
+                customNodes[id].y = Math.max(0, Math.min(MAP_HEIGHT, y));
+            }
+            closeEditorCards();
+            renderAllElements();
+        }
+
+        function handleNodeClick(node) {
+            if (currentMode === 'delete') {
+                delete customNodes[node.id];
+                customEdges = customEdges.filter(e => e.fromId !== node.id && e.toId !== node.id);
+                if (selectedNodeForEdge === node.id) selectedNodeForEdge = null;
+                if (myLocationNodeId === node.id) myLocationNodeId = null;
+                if (routingStartNodeId === node.id) routingStartNodeId = null;
+                if (routingEndNodeId === node.id) routingEndNodeId = null;
+                closeEditorCards();
+                renderAllElements();
+                return;
+            }
+
+            if (currentMode === 'connectLines') {
+                if (selectedNodeForEdge === null) {
+                    selectedNodeForEdge = node.id;
+                    renderAllElements();
+                } else {
+                    if (selectedNodeForEdge === node.id) {
+                        selectedNodeForEdge = null;
+                        renderAllElements();
+                        return;
+                    }
+                    customEdges.push({ fromId: selectedNodeForEdge, toId: node.id });
+                    selectedNodeForEdge = null;
+                    renderAllElements();
+                }
+                return;
+            }
+
+            if (currentMode === 'calibrate') {
+                handleCalibrationClick(node.x, node.y);
+                return;
+            }
+
+            if (currentMode === 'routing') {
+                if (!routingStartNodeId) {
+                    routingStartNodeId = node.id;
+                    renderAllElements();
+                } else if (!routingEndNodeId) {
+                    if (routingStartNodeId === node.id) {
+                        routingStartNodeId = null;
+                    } else {
+                        routingEndNodeId = node.id;
+                    }
+                    renderAllElements();
+                } else {
+                    routingStartNodeId = node.id;
+                    routingEndNodeId = null;
+                    renderAllElements();
+                }
+                return;
+            }
+
+            if (currentMode === 'addAndDrag') {
+                openEditCard(node);
+            }
+        }
+
+        function exportToJsonFile() {
+            let edgeMap = {};
+            Object.keys(customNodes).forEach(id => edgeMap[id] = []);
+            customEdges.forEach(edge => {
+                if (edgeMap[edge.fromId]) edgeMap[edge.fromId].push(edge.toId);
+                if (edgeMap[edge.toId]) edgeMap[edge.toId].push(edge.fromId);
+            });
+
+            const exportData = {
+                studio_version: "2.1-Pro",
+                export_time: new Date().toISOString(),
+                metersPerUnit: metersPerUnit,
+                nodes: customNodes,
+                edges_adjacency_list: edgeMap,
+                raw_edges: customEdges
+            };
+
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "indoor_map_data.json");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        // ==========================================
+        // Calibration Functions
+        // ==========================================
+        function updateScaleBadge() {
+            const badge = document.getElementById('scale-badge');
+            const badgeText = document.getElementById('scale-badge-text');
+            if (isCalibrated) {
+                badge.classList.add('calibrated');
+                badgeText.innerHTML = `สเกล: 1 unit = ${metersPerUnit.toFixed(2)} ม.`;
+            } else {
+                badge.classList.remove('calibrated');
+                badgeText.innerHTML = `ยังไม่ได้คาลิเบรต (1.00 ม./หน่วย)`;
+            }
+        }
+
+        function showCalibrationCard(showIntro) {
+            if (showIntro) {
+                document.getElementById('calib-step-1').style.display = 'block';
+                document.getElementById('calib-step-2').style.display = 'none';
+                document.getElementById('btn-save-calibration').disabled = true;
+            } else {
+                document.getElementById('calib-step-1').style.display = 'none';
+                document.getElementById('calib-step-2').style.display = 'block';
+                document.getElementById('btn-save-calibration').disabled = false;
+
+                const p1 = calibrationPoints[0];
+                const p2 = calibrationPoints[1];
+                const mapDistance = Math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2);
+
+                document.getElementById('calib-start-coords').innerText = `(${p1.x.toFixed(1)}, ${p1.y.toFixed(1)})`;
+                document.getElementById('calib-end-coords').innerText = `(${p2.x.toFixed(1)}, ${p2.y.toFixed(1)})`;
+                document.getElementById('calib-map-dist').value = mapDistance.toFixed(2);
+
+                const calibInput = document.getElementById('calib-real-dist');
+                if (!calibInput.value) {
+                    calibInput.value = (mapDistance * metersPerUnit).toFixed(1);
+                }
+
+                calculateAndDisplayMetersPerUnit();
+            }
+        }
+
+        function handleCalibrationClick(x, y) {
+            if (calibrationPoints.length >= 2) {
+                resetCalibration();
+            }
+
+            calibrationPoints.push({ x, y });
+
+            if (calibrationPoints.length === 1) {
+                const pos = toLatLng(x, y);
+                calibrationTempMarkerStart = L.marker(pos, {
+                    draggable: true,
+                    icon: L.divIcon({
+                        className: 'temp-calibration-marker',
+                        html: '<i class="fa-solid fa-flag" style="color: #d32f2f; font-size: 20px; text-shadow: 0 1px 3px rgba(0,0,0,0.3);"></i>',
+                        iconSize: [20, 20],
+                        iconAnchor: [5, 20]
+                    })
+                }).addTo(map);
+
+                calibrationTempMarkerStart.on('drag', () => {
+                    const newPos = calibrationTempMarkerStart.getLatLng();
+                    const coords = toXY(newPos);
+                    calibrationPoints[0] = { x: Math.max(0, Math.min(MAP_WIDTH, coords.x)), y: Math.max(0, Math.min(MAP_HEIGHT, coords.y)) };
+                    updateCalibrationLineAndCard();
+                });
+
+                showCalibrationCard(true);
+            } else if (calibrationPoints.length === 2) {
+                const p1 = calibrationPoints[0];
+                const p2 = calibrationPoints[1];
+
+                const pos2 = toLatLng(x, y);
+                calibrationTempMarkerEnd = L.marker(pos2, {
+                    draggable: true,
+                    icon: L.divIcon({
+                        className: 'temp-calibration-marker',
+                        html: '<i class="fa-solid fa-flag-checkered" style="color: #2e7d32; font-size: 20px; text-shadow: 0 1px 3px rgba(0,0,0,0.3);"></i>',
+                        iconSize: [20, 20],
+                        iconAnchor: [5, 20]
+                    })
+                }).addTo(map);
+
+                calibrationTempMarkerEnd.on('drag', () => {
+                    const newPos = calibrationTempMarkerEnd.getLatLng();
+                    const coords = toXY(newPos);
+                    calibrationPoints[1] = { x: Math.max(0, Math.min(MAP_WIDTH, coords.x)), y: Math.max(0, Math.min(MAP_HEIGHT, coords.y)) };
+                    updateCalibrationLineAndCard();
+                });
+
+                calibrationTempLine = L.polyline([toLatLng(p1.x, p1.y), toLatLng(p2.x, p2.y)], {
+                    color: '#10b981',
+                    weight: 4,
+                    dashArray: '6, 8',
+                    opacity: 0.8
+                }).addTo(map);
+
+                showCalibrationCard(false);
+            }
+        }
+
+        function updateCalibrationLineAndCard() {
+            if (calibrationPoints.length === 2 && calibrationTempLine) {
+                const p1 = calibrationPoints[0];
+                const p2 = calibrationPoints[1];
+                calibrationTempLine.setLatLngs([toLatLng(p1.x, p1.y), toLatLng(p2.x, p2.y)]);
+
+                const mapDistance = Math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2);
+                document.getElementById('calib-map-dist').value = mapDistance.toFixed(2);
+                document.getElementById('calib-start-coords').innerText = `(${p1.x.toFixed(1)}, ${p1.y.toFixed(1)})`;
+                document.getElementById('calib-end-coords').innerText = `(${p2.x.toFixed(1)}, ${p2.y.toFixed(1)})`;
+
+                calculateAndDisplayMetersPerUnit();
+            }
+        }
+
+        function calculateAndDisplayMetersPerUnit() {
+            const mapDist = parseFloat(document.getElementById('calib-map-dist').value);
+            const realDist = parseFloat(document.getElementById('calib-real-dist').value);
+            const label = document.getElementById('calib-calculated-scale');
+
+            if (mapDist > 0 && realDist > 0) {
+                const calculatedScale = realDist / mapDist;
+                label.innerText = calculatedScale.toFixed(3);
+                document.getElementById('btn-save-calibration').disabled = false;
+            } else {
+                label.innerText = "N/A";
+                document.getElementById('btn-save-calibration').disabled = true;
+            }
+        }
+
+        function saveCalibration() {
+            const mapDist = parseFloat(document.getElementById('calib-map-dist').value);
+            const realDist = parseFloat(document.getElementById('calib-real-dist').value);
+
+            if (mapDist > 0 && realDist > 0) {
+                metersPerUnit = realDist / mapDist;
+                isCalibrated = true;
+                updateScaleBadge();
+                resetCalibration();
+                closeEditorCards();
+                renderAllElements();
+                alert(`ตั้งค่าสเกลสำเร็จ: 1 unit = ${metersPerUnit.toFixed(3)} เมตร`);
+            }
+        }
+
+        function resetCalibration() {
+            calibrationPoints = [];
+            if (calibrationTempMarkerStart) { map.removeLayer(calibrationTempMarkerStart); calibrationTempMarkerStart = null; }
+            if (calibrationTempMarkerEnd) { map.removeLayer(calibrationTempMarkerEnd); calibrationTempMarkerEnd = null; }
+            if (calibrationTempLine) { map.removeLayer(calibrationTempLine); calibrationTempLine = null; }
+
+            const realDistInput = document.getElementById('calib-real-dist');
+            if (realDistInput) realDistInput.value = '';
+
+            if (currentMode === 'calibrate') {
+                showCalibrationCard(true);
+            }
+        }
+
+        // ==========================================
+        // Routing & Pathfinding (Dijkstra)
+        // ==========================================
+        function findShortestPath(startId, endId) {
+            if (!customNodes[startId] || !customNodes[endId]) return null;
+
+            const distances = {};
+            const previous = {};
+            const queue = [];
+
+            Object.keys(customNodes).forEach(id => {
+                distances[id] = Infinity;
+                previous[id] = null;
+                queue.push(id);
+            });
+            distances[startId] = 0;
+
+            const adj = {};
+            Object.keys(customNodes).forEach(id => adj[id] = []);
+            customEdges.forEach(edge => {
+                if (customNodes[edge.fromId] && customNodes[edge.toId]) {
+                    adj[edge.fromId].push(edge.toId);
+                    adj[edge.toId].push(edge.fromId);
+                }
+            });
+
+            while (queue.length > 0) {
+                queue.sort((a, b) => distances[a] - distances[b]);
+                const current = queue.shift();
+
+                if (current === endId) break;
+                if (distances[current] === Infinity) break;
+
+                for (const neighbor of adj[current]) {
+                    if (!queue.includes(neighbor)) continue;
+
+                    const currentCoords = customNodes[current];
+                    const neighborCoords = customNodes[neighbor];
+                    const dist = Math.sqrt((neighborCoords.x - currentCoords.x) ** 2 + (neighborCoords.y - currentCoords.y) ** 2);
+
+                    const alt = distances[current] + dist;
+                    if (alt < distances[neighbor]) {
+                        distances[neighbor] = alt;
+                        previous[neighbor] = current;
+                    }
+                }
+            }
+
+            if (distances[endId] === Infinity) return null;
+
+            const path = [];
+            let curr = endId;
+            while (curr !== null) {
+                path.unshift(curr);
+                curr = previous[curr];
+            }
+
+            return {
+                path: path,
+                distanceUnits: distances[endId],
+                distanceMeters: distances[endId] * metersPerUnit
+            };
+        }
+
+        function clearRouting() {
+            routingStartNodeId = null;
+            routingEndNodeId = null;
+            document.getElementById('routing-card').style.display = 'none';
+            renderAllElements();
+        }
+
+        function closeRouting() {
+            clearRouting();
+            setMode('addAndDrag');
+        }
+
+        updateScaleBadge();
+        renderAllElements();
+    </script>
+</body>
+
+</html>
