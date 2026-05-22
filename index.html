@@ -4,484 +4,137 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Indoor Map Studio Pro</title>
+    <title>Indoor Map Studio Pro (Multi-Floor & Web BLE)</title>
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
-    <style>
-        :root {
-            --primary: #1e88e5;
-            --primary-dark: #1565c0;
-            --bg-light: #f8f9fa;
-            --normal-color: #2e7d32;
-            --ramp-color: #00796b;
-            --stairs-color: #7b1fa2;
-            --elevator-color: #283593;
-            --delete-color: #e53935;
-        }
-
-        html,
-        body {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            width: 100%;
-            overflow: hidden;
-            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
-            background-color: var(--bg-light);
-        }
-
-        #app-container {
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-            width: 100%;
-        }
-
-        /* App Bar Style */
-        #app-bar {
-            background-color: #ffffff;
-            padding: 12px 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-            z-index: 1000;
-        }
-
-        #app-bar h2 {
-            margin: 0;
-            font-size: 20px;
-            color: var(--primary-dark);
-            font-weight: 600;
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 10px;
-        }
-
-        .btn-import {
-            background-color: #64748b;
-            border: none;
-            padding: 10px 16px;
-            color: white;
-            border-radius: 8px;
-            font-weight: bold;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.2s;
-        }
-
-        .btn-import:hover {
-            background-color: #475569;
-        }
-
-        .btn-export {
-            background-color: #43a047;
-            border: none;
-            padding: 10px 20px;
-            color: white;
-            border-radius: 8px;
-            font-weight: bold;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.2s ease;
-            box-shadow: 0 2px 4px rgba(67, 160, 71, 0.3);
-        }
-
-        .btn-export:hover {
-            background-color: #2e7d32;
-            transform: translateY(-1px);
-        }
-
-        /* Toolbar Choices */
-        #toolbar {
-            background-color: white;
-            padding: 12px;
-            display: flex;
-            justify-content: center;
-            gap: 12px;
-            border-bottom: 1px solid #eef2f5;
-            z-index: 1000;
-            flex-wrap: wrap;
-        }
-
-        .chip {
-            padding: 8px 18px;
-            border-radius: 20px;
-            border: 1px solid #e0e6ed;
-            background-color: white;
-            color: #64748b;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.2s;
-        }
-
-        .chip:hover {
-            background-color: #f8fafc;
-        }
-
-        .chip.active[data-mode="addAndDrag"] {
-            background-color: #e3f2fd;
-            color: #0d47a1;
-            border-color: #1e88e5;
-        }
-
-        .chip.active[data-mode="connectLines"] {
-            background-color: #e8f5e9;
-            color: #1b5e20;
-            border-color: #43a047;
-        }
-
-        .chip.active[data-mode="deleteEdge"] {
-            background-color: #fff8e1;
-            color: #b78103;
-            border-color: #ffb300;
-        }
-
-        .chip.active[data-mode="delete"] {
-            background-color: #ffebee;
-            color: #c62828;
-            border-color: #e53935;
-        }
-
-        .chip.active[data-mode="calibrate"] {
-            background-color: #ecfdf5;
-            color: #047857;
-            border-color: #10b981;
-        }
-
-        .chip.active[data-mode="routing"] {
-            background-color: #eff6ff;
-            color: #1d4ed8;
-            border-color: #3b82f6;
-        }
-
-        /* Map Layout */
-        #map-wrapper {
-            flex: 1;
-            position: relative;
-            display: flex;
-        }
-
-        #map {
-            flex: 1;
-            height: 100%;
-            background-color: #f1f5f9;
-        }
-
-        /* Floating Modern Cards */
-        .editor-card {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            width: 320px;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-            z-index: 1001;
-            display: none;
-            overflow: hidden;
-            animation: slideIn 0.2s ease-out;
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .card-header {
-            background: #f8fafc;
-            padding: 14px 18px;
-            border-bottom: 1px solid #e2e8f0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .card-header h3 {
-            margin: 0;
-            font-size: 16px;
-            color: #1e293b;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .card-header .btn-close {
-            background: none;
-            border: none;
-            font-size: 16px;
-            color: #94a3b8;
-            cursor: pointer;
-        }
-
-        .card-header .btn-close:hover {
-            color: #64748b;
-        }
-
-        .card-body {
-            padding: 18px;
-        }
-
-        .form-group {
-            margin-bottom: 14px;
-        }
-
-        .form-group label {
-            display: block;
-            font-size: 12px;
-            font-weight: 600;
-            color: #64748b;
-            margin-bottom: 6px;
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 8px 12px;
-            border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            font-size: 14px;
-            box-sizing: border-box;
-            outline: none;
-            transition: border 0.2s;
-        }
-
-        .form-control:focus {
-            border-color: var(--primary);
-        }
-
-        .row-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
-
-        .card-footer {
-            padding: 12px 18px;
-            background: #f8fafc;
-            border-top: 1px solid #e2e8f0;
-            display: flex;
-            justify-content: flex-end;
-            gap: 8px;
-        }
-
-        .btn {
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            border: none;
-        }
-
-        .btn-secondary {
-            background: #e2e2e2;
-            color: #475569;
-        }
-
-        .btn-secondary:hover {
-            background: #cbd5e1;
-        }
-
-        .btn-primary {
-            background: var(--primary);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: var(--primary-dark);
-        }
-
-        /* Legend Panel */
-        #legend {
-            position: absolute;
-            bottom: 80px;
-            left: 20px;
-            right: 20px;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 12px;
-            border-radius: 8px;
-            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-            display: flex;
-            justify-content: space-around;
-            z-index: 1000;
-            font-size: 12px;
-            font-weight: 600;
-            color: #475569;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        /* Tip Bar */
-        #tip-panel {
-            position: absolute;
-            bottom: 16px;
-            left: 20px;
-            right: 20px;
-            background: rgba(15, 23, 42, 0.85);
-            color: #f8fafc;
-            padding: 10px 16px;
-            border-radius: 8px;
-            text-align: center;
-            font-size: 12px;
-            z-index: 1000;
-            pointer-events: none;
-            backdrop-filter: blur(4px);
-        }
-
-        .custom-node-html {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .node-label {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 4px;
-            padding: 2px 6px;
-            font-size: 9px;
-            font-weight: bold;
-            white-space: nowrap;
-            text-align: center;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            margin-top: 4px;
-            line-height: 1.2;
-            border: 1px solid #cbd5e1;
-        }
-
-        /* Scale Badge Style */
-        #scale-badge {
-            background-color: #f1f5f9;
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 600;
-            color: #334155;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            border: 1px solid #e2e8f0;
-            transition: all 0.3s ease;
-        }
-
-        #scale-badge.calibrated {
-            background-color: #ecfdf5;
-            border-color: #a7f3d0;
-            color: #065f46;
-        }
-
-        /* Custom Leaflet Tooltip for edges */
-        .edge-tooltip {
-            background-color: rgba(15, 23, 42, 0.9) !important;
-            color: #f8fafc !important;
-            border: none !important;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15) !important;
-            font-size: 11px !important;
-            font-weight: 600 !important;
-            border-radius: 6px !important;
-            padding: 4px 8px !important;
-        }
-
-        .edge-tooltip::before {
-            border-top-color: rgba(15, 23, 42, 0.9) !important;
-        }
-
-        @keyframes pulse {
-            0% {
-                transform: scale(1);
-                opacity: 1;
-            }
-
-            50% {
-                transform: scale(1.03);
-                opacity: 0.9;
-            }
-
-            100% {
-                transform: scale(1);
-                opacity: 1;
-            }
-        }
-
-        .pulse-effect {
-            animation: pulse 1.8s infinite ease-in-out;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
     <div id="app-container">
-        <div id="app-bar">
-            <h2
-                style="display: flex; align-items: center; gap: 12px; margin: 0; font-size: 20px; color: var(--primary-dark); font-weight: 600;">
-                <i class="fa-solid fa-map-location-dot"></i> Indoor Map Studio Pro
-                <div id="scale-badge">
-                    <i class="fa-solid fa-ruler-combined"></i> <span id="scale-badge-text">ยังไม่ได้คาลิเบรต (1.00
-                        ม./หน่วย)</span>
+        <!-- แถบด้านซ้าย (Left Sidebar) -->
+        <div id="sidebar-left">
+            <div class="sidebar-brand">
+                <i class="fa-solid fa-map-location-dot"></i>
+                <h2>Indoor Studio Pro</h2>
+            </div>
+            
+            <div class="sidebar-scrollable">
+                <!-- ส่วนเปลี่ยนชั้นแผนที่ -->
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title"><i class="fa-solid fa-layer-group"></i> ชั้นแผนที่ (Floor Layers)</div>
+                    <div class="floor-stack">
+                        <button class="floor-btn active" onclick="switchFloor(1)" id="floor-btn-1">ชั้น 1 (Floor 1)</button>
+                        <button class="floor-btn" onclick="switchFloor(2)" id="floor-btn-2">ชั้น 2 (Floor 2)</button>
+                        <button class="floor-btn" onclick="switchFloor(3)" id="floor-btn-3">ชั้น 3 (Floor 3)</button>
+                    </div>
+                    <button onclick="openFloorSettings()" style="margin-top: 8px; padding: 10px 14px; border: 1px dashed var(--primary); border-radius: 8px; background: rgba(59, 130, 246, 0.05); color: var(--primary); font-size: 12px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s ease;" onmouseover="this.style.background='rgba(59, 130, 246, 0.1)'" onmouseout="this.style.background='rgba(59, 130, 246, 0.05)'">
+                        <i class="fa-solid fa-image"></i> อัปโหลดรูปแผนที่แยกชั้น
+                    </button>
                 </div>
-            </h2>
-            <div class="action-buttons">
-                <input type="file" id="json-file-input" accept=".json" style="display: none;"
-                    onchange="importFromJsonFile(event)">
-                <button class="btn-import" onclick="document.getElementById('json-file-input').click()"><i
-                        class="fa-solid fa-file-import"></i> Import JSON</button>
-                <button class="btn-export" onclick="exportToJsonFile()"><i class="fa-solid fa-file-arrow-down"></i>
-                    Export JSON</button>
+                
+                <!-- เครื่องมือร่างแผนที่ -->
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title"><i class="fa-solid fa-screwdriver-wrench"></i> เครื่องมือร่างแผนที่ (Tools)</div>
+                    <div class="tool-stack">
+                        <div class="chip active" data-mode="addAndDrag" onclick="setMode('addAndDrag')">
+                            <i class="fa-solid fa-location-dot"></i> วาง/ลากหมุดโหนด
+                        </div>
+                        <div class="chip" data-mode="connectLines" onclick="setMode('connectLines')">
+                            <i class="fa-solid fa-route"></i> เชื่อมเส้นทางเดิน
+                        </div>
+                        <div class="chip" data-mode="quickPath" onclick="setMode('quickPath')">
+                            <i class="fa-solid fa-pen-nib"></i> วาดเส้นทางด่วน (จุดเลี้ยว)
+                        </div>
+                        <div class="chip" data-mode="deleteEdge" onclick="setMode('deleteEdge')">
+                            <i class="fa-solid fa-scissors"></i> ลบเส้นเชื่อมทาง
+                        </div>
+                        <div class="chip" data-mode="delete" onclick="setMode('delete')">
+                            <i class="fa-solid fa-eraser"></i> ลบหมุดโหนด
+                        </div>
+                        <div class="chip" data-mode="calibrate" onclick="setMode('calibrate')">
+                            <i class="fa-solid fa-ruler-combined"></i> กำหนดขนาดสเกล
+                        </div>
+                        <div class="chip" data-mode="routing" onclick="setMode('routing')">
+                            <i class="fa-solid fa-diamond-turn-right"></i> ทดสอบการนำทาง
+                        </div>
+                    </div>
+                </div>
+
+                <!-- วิดเจ็ตสเกล (Scale Widget) -->
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title"><i class="fa-solid fa-ruler"></i> สเกลแผนที่ (Scale)</div>
+                    <div class="sidebar-calib-widget">
+                        <div class="sidebar-calib-title">
+                            <i class="fa-solid fa-circle-xmark" style="color: var(--delete-color);" id="calib-indicator-icon"></i>
+                            <span id="calib-status-text">ยังไม่ได้คาลิเบรต</span>
+                        </div>
+                        <div style="line-height: 1.4; color: var(--text-muted); font-size: 11px;" id="calib-desc-text">
+                            (สเกลเริ่มต้น 1.00 ม./หน่วย)
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div id="toolbar">
-            <div class="chip active" data-mode="addAndDrag" onclick="setMode('addAndDrag')">
-                <i class="fa-solid fa-location-dot"></i> วาง/ลากโหนด
+        <!-- พื้นที่ทำงานขวา (Workspace Right) -->
+        <div id="workspace-right">
+            <!-- App Bar บางเฉียบสไตล์ Figma -->
+            <div id="app-bar">
+                <h2>
+                    <i class="fa-solid fa-circle-nodes" style="color: var(--primary);"></i>
+                    <span>กำลังแก้ไข: </span><span id="current-floor-indicator" style="color: var(--primary); font-weight: 700;">ชั้น 1</span>
+                </h2>
+                
+                <div class="action-buttons">
+                    <button class="btn-import" onclick="document.getElementById('startup-overlay').style.display = 'flex'" style="background-color: #27272a; font-weight: 600;"><i class="fa-solid fa-house"></i> หน้าต้อนรับ</button>
+                    <button class="btn-import" onclick="openBluetoothConfigurator()" style="background-color: rgba(6, 182, 212, 0.1); border-color: var(--elevator-color); color: var(--elevator-color);"><i class="fa-solid fa-bluetooth"></i> ตั้งค่าบอร์ดไร้สาย (BLE)</button>
+                    <button class="btn-import" onclick="undoAction()" style="background-color: #64748b; color: white; border-color: #475569;"><i class="fa-solid fa-rotate-left"></i> ย้อนกลับ (Undo)</button>
+                    <input type="file" id="json-file-input" accept=".json" style="display: none;" onchange="importFromJsonFile(event)">
+                    <button class="btn-import" onclick="document.getElementById('json-file-input').click()"><i class="fa-solid fa-file-import"></i> นำเข้าไฟล์พิกัด (.json)</button>
+                    <button class="btn-export" onclick="exportToJsonFile()"><i class="fa-solid fa-file-arrow-down"></i> บันทึกและส่งออกแผนที่</button>
+                </div>
             </div>
-            <div class="chip" data-mode="connectLines" onclick="setMode('connectLines')">
-                <i class="fa-solid fa-route"></i> เชื่อมเส้นทาง
-            </div>
-            <div class="chip" data-mode="deleteEdge" onclick="setMode('deleteEdge')">
-                <i class="fa-solid fa-scissors" style="color: #ffb300;"></i> <span
-                    style="color: #b78103;">ลบเส้นเชื่อม</span>
-            </div>
-            <div class="chip" data-mode="delete" onclick="setMode('delete')">
-                <i class="fa-solid fa-eraser" style="color: red;"></i> <span style="color: red;">ลบโหนด</span>
-            </div>
-            <div class="chip" data-mode="calibrate" onclick="setMode('calibrate')">
-                <i class="fa-solid fa-ruler-combined" style="color: #10b981;"></i> <span
-                    style="color: #047857;">กำหนดสเกล</span>
-            </div>
-            <div class="chip" data-mode="routing" onclick="setMode('routing')">
-                <i class="fa-solid fa-diamond-turn-right" style="color: #3b82f6;"></i> <span
-                    style="color: #1d4ed8;">ทดสอบค้นหาเส้นทาง</span>
-            </div>
-        </div>
 
-        <div id="map-wrapper">
-            <div id="map"></div>
+            <!-- พื้นที่แสดงแผนที่และหน้าต่างการแก้ไข -->
+            <div id="map-wrapper">
+                <div id="map"></div>
 
+            <!-- หน้าต่างเริ่มต้นต้อนรับผู้ใช้งาน (Startup Dashboard Overlay) -->
+            <div id="startup-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(8px); z-index: 9999; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;">
+                <div style="background: white; border-radius: 24px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); width: 520px; max-width: 90%; padding: 40px; text-align: center; border: 1px solid rgba(255,255,255,0.8); position: relative; transition: all 0.3s;">
+                    <button class="btn-close" onclick="document.getElementById('startup-overlay').style.display = 'none'" style="position: absolute; top: 20px; right: 25px; font-size: 28px; border: none; background: transparent; cursor: pointer; color: #94a3b8; transition: color 0.2s;" onmouseover="this.style.color='#475569'" onmouseout="this.style.color='#94a3b8'">&times;</button>
+                    
+                    <div style="width: 80px; height: 80px; background: #e0f2fe; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                        <i class="fa-solid fa-map-location-dot" style="color: #0284c7; font-size: 40px;"></i>
+                    </div>
+                    <h2 style="margin: 0 0 10px; color: #0f172a; font-size: 24px; font-weight: 700;">Indoor Map Studio Pro</h2>
+                    <p style="color: #64748b; font-size: 14px; line-height: 1.6; margin: 0 0 30px;">
+                        ยินดีต้อนรับสู่ระบบสตูดิโอจัดแต่งแผนที่นำทางอาคารอัจฉริยะ (Multi-Floor BLE Beacon Map Editor)<br>
+                        กรุณาเลือกวิธีการเริ่มต้นใช้งานเพื่อเข้าสู่แผงควบคุมหลัก
+                    </p>
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <button class="btn btn-success" onclick="loadFromAutoSave()" style="padding: 16px; border-radius: 12px; font-size: 15px; font-weight: bold; background: #10b981; color: white; display: flex; align-items: center; justify-content: center; gap: 10px; border: none; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 6px rgba(16,185,129,0.25);" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">
+                            <i class="fa-solid fa-clock-rotate-left" style="font-size: 18px;"></i> กู้คืนแผนที่ล่าสุด (Auto-Save)
+                        </button>
+                        <button class="btn btn-primary" onclick="document.getElementById('json-file-input').click();" style="padding: 16px; border-radius: 12px; font-size: 15px; font-weight: bold; background: #0284c7; color: white; display: flex; align-items: center; justify-content: center; gap: 10px; border: none; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 6px rgba(2,132,199,0.25);" onmouseover="this.style.background='#0369a1'" onmouseout="this.style.background='#0284c7'">
+                            <i class="fa-solid fa-file-import" style="font-size: 18px;"></i> นำเข้าไฟล์พิกัดแผนที่เดิม (.json)
+                        </button>
+                        <button class="btn btn-secondary" onclick="startFreshMap()" style="padding: 16px; border-radius: 12px; font-size: 15px; font-weight: bold; background: #f1f5f9; color: #334155; display: flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid #cbd5e1; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#f1f5f9'">
+                            <i class="fa-solid fa-folder-plus" style="font-size: 18px;"></i> เริ่มสร้างแผนที่ใหม่จากศูนย์
+                        </button>
+                    </div>
+                    <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid #e2e8f0; text-align: left; font-size: 12px; color: #64748b; line-height: 1.5;">
+                        💡 <strong>คำแนะนำเพิ่มเติม:</strong><br>
+                        หลังจากเลือกสร้างแผนที่ใหม่ คุณสามารถอัปโหลดรูปภาพพื้นหลังของแต่ละชั้น (ชั้น 1, 2, 3) เพื่อระบุโหนดนำทางและเชื่อมต่อบลูทูธตั้งค่า ESP32 ไร้สายได้ทันที
+                    </div>
+                </div>
+            </div>
+
+            <!-- หน้าต่าง เพิ่มโหนดใหม่ -->
             <div id="create-node-card" class="editor-card">
                 <div class="card-header">
                     <h3><i class="fa-solid fa-circle-plus" style="color: var(--primary);"></i> เพิ่มโหนดใหม่</h3>
@@ -503,6 +156,20 @@
                     </div>
                     <div class="row-grid">
                         <div class="form-group">
+                            <label>Beacon Major (ชั้น)</label>
+                            <input type="number" id="new-node-major" class="form-control" placeholder="เช่น 1">
+                        </div>
+                        <div class="form-group">
+                            <label>Beacon Minor (ห้อง)</label>
+                            <input type="number" id="new-node-minor" class="form-control" placeholder="เช่น 101">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>MAC Address บอร์ด BLE (ถ้ามี)</label>
+                        <input type="text" id="new-node-mac" class="form-control" placeholder="เช่น Beacon-A1B2C3D4E5F6">
+                    </div>
+                    <div class="row-grid" style="margin-top: 10px;">
+                        <div class="form-group">
                             <label>พิกัด X</label>
                             <input type="text" id="new-node-x" class="form-control" readonly>
                         </div>
@@ -518,12 +185,13 @@
                 </div>
             </div>
 
+            <!-- หน้าต่าง แก้ไขข้อมูลโหนด -->
             <div id="edit-node-card" class="editor-card">
                 <div class="card-header">
                     <h3><i class="fa-solid fa-pen-to-square" style="color: #ffa000;"></i> แก้ไขข้อมูลโหนด</h3>
                     <button class="btn-close" onclick="closeEditorCards()">&times;</button>
                 </div>
-                <div class="card-body">
+                <div class="card-body" style="max-height: 400px; overflow-y: auto;">
                     <input type="hidden" id="edit-node-id">
                     <div class="form-group">
                         <label>ชื่อห้อง / จุดทางเดิน</label>
@@ -531,7 +199,7 @@
                     </div>
                     <div class="form-group">
                         <label>ประเภทโหนด</label>
-                        <select id="edit-node-type" class="form-control">
+                        <select id="edit-node-type" class="form-control" onchange="toggleInterFloorSelect(this.value)">
                             <option value="normal">โหนดปกติ</option>
                             <option value="ramp">โหนดทางลาด</option>
                             <option value="stairs">โหนดบันได</option>
@@ -539,6 +207,30 @@
                         </select>
                     </div>
                     <div class="row-grid">
+                        <div class="form-group">
+                            <label>Beacon Major (ชั้น)</label>
+                            <input type="number" id="edit-node-major" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>Beacon Minor (ห้อง)</label>
+                            <input type="number" id="edit-node-minor" class="form-control">
+                        </div>
+                    </div>
+                    <button class="btn btn-secondary" onclick="generateMajorMinorForEdit()" style="width: 100%; margin-bottom: 15px; font-size: 12px; background-color: #f8fafc; border: 1px dashed #cbd5e1; color: #475569; padding: 6px; cursor: pointer;"><i class="fa-solid fa-wand-magic-sparkles"></i> สร้าง Major/Minor อัตโนมัติ (ถัดไป)</button>
+                    <div class="form-group">
+                        <label>MAC Address บอร์ด BLE (ถ้ามี)</label>
+                        <input type="text" id="edit-node-mac" class="form-control" placeholder="เช่น Beacon-A1B2C3D4E5F6">
+                    </div>
+                    
+                    <!-- ส่วนเลือกจุดเชื่อมข้ามชั้น -->
+                    <div class="form-group" id="edit-interfloor-group" style="display:none; border-top: 1px dashed #cbd5e1; padding-top: 10px; margin-top: 10px;">
+                        <label style="color: #7b1fa2; font-weight: bold;"><i class="fa-solid fa-link"></i> เชื่อมข้ามชั้นไปยังโหนด:</label>
+                        <select id="edit-node-interfloor" class="form-control">
+                            <option value="">-- ไม่เชื่อมโยง --</option>
+                        </select>
+                    </div>
+
+                    <div class="row-grid" style="margin-top: 10px;">
                         <div class="form-group">
                             <label>พิกัด X (0-100)</label>
                             <input type="number" step="0.1" id="edit-node-x" class="form-control">
@@ -549,30 +241,114 @@
                         </div>
                     </div>
                 </div>
-                <div class="card-footer">
-                    <button class="btn btn-secondary" onclick="closeEditorCards()">ยกเลิก</button>
-                    <button class="btn btn-primary" onclick="updateNodeDetails()">บันทึก</button>
+                <div class="card-footer" style="display: flex; flex-direction: column; gap: 8px;">
+                    <div style="display: flex; gap: 8px; width: 100%;">
+                        <button class="btn btn-export" style="background-color: #3b82f6; border: none; color: white; padding: 10px; border-radius: 6px; cursor: pointer; flex: 1; font-size: 13px;" onclick="quickSyncBT()" id="btn-quick-sync-bt"><i class="fa-solid fa-bluetooth"></i> ซิงค์บอร์ด (BT)</button>
+                        <button class="btn btn-export" style="background-color: #0f172a; border: none; color: white; padding: 10px; border-radius: 6px; cursor: pointer; flex: 1; font-size: 13px;" onclick="quickSyncUSB()" id="btn-quick-sync-usb"><i class="fa-brands fa-usb"></i> ซิงค์บอร์ด (USB)</button>
+                    </div>
+                    <div style="display: flex; gap: 8px; width: 100%;">
+                        <button class="btn btn-secondary" onclick="closeEditorCards()" style="flex: 1;">ยกเลิก</button>
+                        <button class="btn btn-primary" onclick="updateNodeDetails()" style="flex: 1;">บันทึก</button>
+                    </div>
                 </div>
             </div>
 
+            <!-- หน้าต่างกำหนดรูปแผนที่แยกชั้น -->
+            <div id="floor-settings-card" class="editor-card" style="width: 380px;">
+                <div class="card-header">
+                    <h3><i class="fa-solid fa-images" style="color: var(--primary);"></i> อัปโหลดรูปภาพแผนที่แยกชั้น</h3>
+                    <button class="btn-close" onclick="closeEditorCards()">&times;</button>
+                </div>
+                <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                    <p style="font-size: 11px; color: #64748b; margin-top: 0;">คุณสามารถอัปโหลดภาพแผนที่ (PNG/JPG) ของแต่ละชั้นได้ ข้อมูลภาพจะถูกแปลงเป็น Base64 และแนบถาวรไปกับไฟล์ส่งออก</p>
+                    
+                    <div class="form-group" style="border-bottom: 1px solid #f1f5f9; padding-bottom: 10px;">
+                        <label style="display: flex; justify-content: space-between;">
+                            <span>รูปแผนที่ชั้น 1</span>
+                            <span id="status-img-1" style="color: #10b981; font-size: 10px;">(ค่าเริ่มต้น)</span>
+                        </label>
+                        <input type="file" id="upload-floor-1" accept="image/*" class="form-control" onchange="handleFloorImageUpload(event, 1)">
+                    </div>
+                    
+                    <div class="form-group" style="border-bottom: 1px solid #f1f5f9; padding-bottom: 10px;">
+                        <label style="display: flex; justify-content: space-between;">
+                            <span>รูปแผนที่ชั้น 2</span>
+                            <span id="status-img-2" style="color: #10b981; font-size: 10px;">(ค่าเริ่มต้น)</span>
+                        </label>
+                        <input type="file" id="upload-floor-2" accept="image/*" class="form-control" onchange="handleFloorImageUpload(event, 2)">
+                    </div>
+                    
+                    <div class="form-group" style="padding-bottom: 10px;">
+                        <label style="display: flex; justify-content: space-between;">
+                            <span>รูปแผนที่ชั้น 3</span>
+                            <span id="status-img-3" style="color: #10b981; font-size: 10px;">(ค่าเริ่มต้น)</span>
+                        </label>
+                        <input type="file" id="upload-floor-3" accept="image/*" class="form-control" onchange="handleFloorImageUpload(event, 3)">
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-primary" onclick="closeEditorCards()">เสร็จสิ้น</button>
+                </div>
+            </div>
+
+            <!-- หน้าต่าง Web Bluetooth Configurator -->
+            <div id="bt-configurator-card" class="editor-card" style="width: 360px;">
+                <div class="card-header">
+                    <h3><i class="fa-solid fa-bluetooth" style="color: #1e88e5;"></i> ตั้งค่า ESP32 ไร้สาย (OTA)</h3>
+                    <button class="btn-close" onclick="closeEditorCards()">&times;</button>
+                </div>
+                <div class="card-body">
+                    <div id="bt-scan-status" style="font-size: 12px; color: #475569; text-align: center; padding: 10px 0;">
+                         <i class="fa-solid fa-tower-broadcast" style="color: #1e88e5; font-size: 32px; margin-bottom: 8px;" class="pulse-effect"></i><br>
+                         สแกนและแก้ไขข้อมูลบอร์ด ESP32 ด้วยสัญญาณบลูทูธเบราว์เซอร์
+                    </div>
+                    
+                    <div id="bt-connected-panel" style="display: none; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+                        <div style="font-size: 13px; font-weight: bold; color: #166534; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+                            <i class="fa-solid fa-circle-check" style="color: #22c55e;"></i> เชื่อมต่อ ESP32 สำเร็จ!
+                        </div>
+                        <div style="font-size: 12px; color: #374151; line-height: 1.4;">
+                            <strong>ชื่อบอร์ด:</strong> <span id="bt-device-name">-</span><br>
+                            <strong>พิกัดปัจจุบัน:</strong> <span id="bt-device-info" style="color: #1d4ed8; font-weight: bold;">กำลังดึงข้อมูล...</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>ตั้งค่าเลขชั้น (Beacon Major)</label>
+                        <input type="number" id="bt-input-major" min="1" max="100" class="form-control" placeholder="ระบุชั้น เช่น 1, 2, 3">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>ตั้งค่ารหัสห้อง/พิกัด (Beacon Minor)</label>
+                        <input type="number" id="bt-input-minor" min="1" max="65535" class="form-control" placeholder="ระบุรหัสตำแหน่ง เช่น 101, 205">
+                    </div>
+                    <button class="btn btn-secondary" onclick="autoGenerateBtConfigId()" style="width: 100%; margin-bottom: 15px; font-size: 13px; background-color: #f8fafc; border: 1px dashed #cbd5e1; color: #475569; padding: 8px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#f8fafc'"><i class="fa-solid fa-wand-magic-sparkles"></i> สร้าง Major/Minor อัตโนมัติ (ถัดไป)</button>
+                </div>
+                <div class="card-footer" style="display: flex; flex-direction: column; gap: 8px; width: 100%; box-sizing: border-box;">
+                    <button class="btn btn-primary" onclick="connectAndSyncSerial()" style="width: 100%; background-color: #0f172a; border: none; color: white; padding: 10px; border-radius: 6px;"><i class="fa-brands fa-usb"></i> ซิงค์ผ่านสาย USB (สเถียร 100%)</button>
+                    <div style="display: flex; gap: 8px; width: 100%;">
+                        <button class="btn btn-secondary" id="btn-bt-disconnect" onclick="disconnectBluetooth()" style="display: none; flex: 1;">ตัดการเชื่อมต่อ BT</button>
+                        <button class="btn btn-primary" id="btn-bt-connect" onclick="connectBluetooth()" style="flex: 1;"><i class="fa-solid fa-wifi"></i> เชื่อมต่อ BT</button>
+                        <button class="btn btn-export" id="btn-bt-save" onclick="writeBluetoothConfig()" disabled style="flex: 1;"><i class="fa-solid fa-floppy-disk"></i> เซฟ (BT)</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- หน้าต่างสเกลแผนที่ -->
             <div id="calibration-card" class="editor-card">
                 <div class="card-header">
                     <h3><i class="fa-solid fa-ruler-combined" style="color: #10b981;"></i> กำหนดสเกลแผนที่</h3>
                     <button class="btn-close" onclick="closeEditorCards()">&times;</button>
                 </div>
                 <div class="card-body">
-                    <div id="calib-step-1"
-                        style="font-size: 13px; color: #475569; text-align: center; padding: 10px 0; line-height: 1.6;">
-                        <i class="fa-solid fa-circle-info"
-                            style="color: #1e88e5; font-size: 20px; margin-bottom: 8px;"></i><br>
+                    <div id="calib-step-1" style="font-size: 13px; color: #475569; text-align: center; padding: 10px 0; line-height: 1.6;">
+                        <i class="fa-solid fa-circle-info" style="color: #1e88e5; font-size: 20px; margin-bottom: 8px;"></i><br>
                         กรุณาคลิกเลือกจุด 2 จุดบนแผนที่<br>หรือลากธงสีแดง/เขียวเพื่อสร้างระยะอ้างอิง
                     </div>
                     <div id="calib-step-2" style="display: none;">
                         <div class="row-grid" style="margin-bottom: 12px; font-size: 12px;">
-                            <div><strong>จุดเริ่มต้น:</strong> <span id="calib-start-coords" style="color: #d32f2f;">(0,
-                                    0)</span></div>
-                            <div><strong>จุดปลายทาง:</strong> <span id="calib-end-coords" style="color: #2e7d32;">(0,
-                                    0)</span></div>
+                            <div><strong>จุดเริ่มต้น:</strong> <span id="calib-start-coords" style="color: #d32f2f;">(0, 0)</span></div>
+                            <div><strong>จุดปลายทาง:</strong> <span id="calib-end-coords" style="color: #2e7d32;">(0, 0)</span></div>
                         </div>
                         <div class="form-group">
                             <label>ระยะห่างในหน่วยแผนที่ (Map Units)</label>
@@ -580,23 +356,20 @@
                         </div>
                         <div class="form-group">
                             <label>ระยะทางจริงทางกายภาพ (เมตร)</label>
-                            <input type="number" step="0.1" min="0.1" id="calib-real-dist" class="form-control"
-                                placeholder="เช่น 5 หรือ 10" oninput="calculateAndDisplayMetersPerUnit()">
+                            <input type="number" step="0.1" min="0.1" id="calib-real-dist" class="form-control" placeholder="เช่น 5 หรือ 10" oninput="calculateAndDisplayMetersPerUnit()">
                         </div>
-                        <div
-                            style="background-color: #f8fafc; padding: 10px; border-radius: 6px; border: 1px dashed #cbd5e1; font-size: 12px; text-align: center; color: #1e293b;">
-                            สเกลที่ได้: <strong id="calib-calculated-scale"
-                                style="color: #10b981; font-size: 14px;">1.000</strong> เมตร/หน่วยแผนที่
+                        <div style="background-color: #f8fafc; padding: 10px; border-radius: 6px; border: 1px dashed #cbd5e1; font-size: 12px; text-align: center; color: #1e293b;">
+                            สเกลที่ได้: <strong id="calib-calculated-scale" style="color: #10b981; font-size: 14px;">1.000</strong> เมตร/หน่วยแผนที่
                         </div>
                     </div>
                 </div>
                 <div class="card-footer">
                     <button class="btn btn-secondary" onclick="resetCalibration()">รีเซ็ต</button>
-                    <button class="btn btn-primary" id="btn-save-calibration" onclick="saveCalibration()"
-                        disabled>บันทึกสเกล</button>
+                    <button class="btn btn-primary" id="btn-save-calibration" onclick="saveCalibration()" disabled>บันทึกสเกล</button>
                 </div>
             </div>
 
+            <!-- หน้าต่างทดสอบค้นหาเส้นทาง -->
             <div id="routing-card" class="editor-card">
                 <div class="card-header">
                     <h3><i class="fa-solid fa-diamond-turn-right" style="color: #3b82f6;"></i> ค้นหาเส้นทางเดิน</h3>
@@ -612,30 +385,31 @@
                 </div>
             </div>
 
+            <!-- คำอธิบายสัญลักษณ์ (Legend) -->
             <div id="legend">
-                <div class="legend-item"><i class="fa-solid fa-circle" style="color: var(--normal-color);"></i> ปกติ
-                </div>
-                <div class="legend-item"><i class="fa-solid fa-wheelchair" style="color: var(--ramp-color);"></i> ทางลาด
-                </div>
-                <div class="legend-item"><i class="fa-solid fa-stairs" style="color: var(--stairs-color);"></i> บันได
-                </div>
-                <div class="legend-item"><i class="fa-solid fa-elevator" style="color: var(--elevator-color);"></i>
-                    ลิฟต์</div>
-                <div class="legend-item"><i class="fa-solid fa-star" style="color: var(--primary);"></i> ตำแหน่งปัจจุบัน
-                </div>
+                <div class="legend-item"><i class="fa-solid fa-circle" style="color: var(--normal-color);"></i> ปกติ</div>
+                <div class="legend-item"><i class="fa-solid fa-circle" style="color: #94a3b8; font-size: 10px;"></i> จุดเลี้ยว</div>
+                <div class="legend-item"><i class="fa-solid fa-wheelchair" style="color: var(--ramp-color);"></i> ทางลาด</div>
+                <div class="legend-item"><i class="fa-solid fa-stairs" style="color: var(--stairs-color);"></i> บันได</div>
+                <div class="legend-item"><i class="fa-solid fa-elevator" style="color: var(--elevator-color);"></i> ลิฟต์</div>
+                <div class="legend-item"><i class="fa-solid fa-star" style="color: var(--primary);"></i> ตำแหน่งปัจจุบัน</div>
             </div>
 
             <div id="tip-panel">
-                💡 วิธีใช้: สามารถกดปุ่ม Import JSON เพื่อดึงไฟล์แผนที่เดิมกลับเข้ามาแก้ไขต่อได้เลยทันที
+                💡 วิธีใช้: สามารถคลิกปุ่มสลับชั้นเพื่อวาดแผนที่แยกแต่ละชั้น และใช้เมนูเชื่อมข้ามชั้นเพื่อเชื่อมโยงเส้นทางข้ามลิฟต์/บันได
             </div>
-        </div>
-    </div>
+            </div> <!-- /#map-wrapper -->
+        </div> <!-- /#workspace-right -->
+    </div> <!-- /#app-container -->
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
         const MAP_HEIGHT = 50;
         const MAP_WIDTH = 100;
+
+        // รูปตารางพิมพ์เขียวสีเข้มแบบออฟไลน์สำเร็จรูป เมื่อยังไม่ได้ใส่รูปภาพพื้นหลัง
+        const fallbackBlueprint = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="500" viewBox="0 0 1000 500"><rect width="1000" height="500" fill="%2309090b"/><defs><pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="%2327272a" stroke-width="1"/><path d="M 100 0 L 0 0 0 100" fill="none" stroke="%233f3f46" stroke-width="1.5"/></pattern></defs><rect width="1000" height="500" fill="url(%23grid)"/><text x="500" y="250" font-family="Segoe UI, -apple-system, BlinkMacSystemFont, sans-serif" font-size="18" fill="%2371717a" text-anchor="middle" font-weight="bold">สตูดิโอแผนที่เปล่า - กรุณาอัปโหลดรูปแผนที่ในเมนูด้านซ้าย</text></svg>`;
 
         let customNodes = {};
         let customEdges = [];
@@ -649,6 +423,14 @@
         let metersPerUnit = 1.0;
         let isCalibrated = false;
 
+        // ดาต้าเบสระบบ 3 ชั้น
+        let currentFloor = 1;
+        let floorImages = {
+            1: '',
+            2: '',
+            3: ''
+        };
+
         // Calibration state
         let calibrationPoints = [];
         let calibrationTempMarkerStart = null;
@@ -659,6 +441,15 @@
         let routingStartNodeId = null;
         let routingEndNodeId = null;
 
+        // ประวัติการย้อนกลับ (Undo / Auto-Save)
+        let historyStack = [];
+        const maxHistory = 30;
+        let currentEditingNodeIdForBT = null;
+
+        // บลูทูธสำหรับการสื่อสารหา ESP32
+        let bluetoothDevice = null;
+        let configCharacteristic = null;
+
         // ตั้งค่า Leaflet Map
         const map = L.map('map', {
             crs: L.CRS.Simple,
@@ -668,7 +459,7 @@
         });
 
         const bounds = [[0, 0], [MAP_HEIGHT, MAP_WIDTH]];
-        L.imageOverlay('assets/images/floor_plan.png', bounds).addTo(map);
+        L.imageOverlay(floorImages[1] || fallbackBlueprint, bounds).addTo(map);
         map.setView([MAP_HEIGHT / 2, MAP_WIDTH / 2], 3);
 
         function setMode(mode) {
@@ -714,13 +505,21 @@
                 case 'ramp': return 'var(--ramp-color)';
                 case 'stairs': return 'var(--stairs-color)';
                 case 'elevator': return 'var(--elevator-color)';
+                case 'waypoint': return '#94a3b8';
                 case 'normal':
                 default: return 'var(--normal-color)';
             }
         }
 
-        function getNodeIconHtml(type, id) {
+        function getNodeIconHtml(type, id, major, minor) {
             let iconClass = 'fa-circle';
+            let extraIcon = '';
+            
+            // หากมี Beacon ผูกอยู่ ให้แสดงไอคอน Bluetooth เล็กๆ เพิ่มเติม
+            if (major !== undefined && minor !== undefined && major !== null && minor !== null) {
+                extraIcon = `<i class="fa-solid fa-bluetooth pulse-effect" style="color: #0284c7; font-size: 10px; position: absolute; margin-top: -12px; margin-left: 10px;"></i>`;
+            }
+
             if (myLocationNodeId === id && currentMode !== 'delete') iconClass = 'fa-star';
             else if (currentMode === 'routing' && routingStartNodeId === id) iconClass = 'fa-circle-dot';
             else if (currentMode === 'routing' && routingEndNodeId === id) iconClass = 'fa-flag-checkered';
@@ -729,9 +528,105 @@
                 else if (type === 'stairs') iconClass = 'fa-stairs';
                 else if (type === 'elevator') iconClass = 'fa-elevator';
             }
-            return `<i class="fa-solid ${iconClass}" style="color: ${getNodeColor(type, id)}; font-size: 16px;"></i>`;
+            return `<div style="position: relative;">
+                        <i class="fa-solid ${iconClass}" style="color: ${getNodeColor(type, id)}; font-size: 16px;"></i>
+                        ${extraIcon}
+                    </div>`;
         }
 
+        // สลับชั้น
+        function switchFloor(floorNum) {
+            currentFloor = parseInt(floorNum);
+            
+            // อัปเดตคลาส active
+            document.querySelectorAll('.floor-btn').forEach(btn => btn.classList.remove('active'));
+            const activeBtn = document.getElementById(`floor-btn-${floorNum}`);
+            if (activeBtn) activeBtn.classList.add('active');
+            
+            // อัปเดตสีปุ่มเพื่อความสวยงาม
+            document.querySelectorAll('.floor-btn').forEach(btn => {
+                if (btn.classList.contains('active')) {
+                    btn.style.background = 'var(--primary)';
+                    btn.style.color = 'white';
+                    btn.style.borderColor = 'var(--primary)';
+                } else {
+                    btn.style.background = 'white';
+                    btn.style.color = '#64748b';
+                    btn.style.borderColor = '#cbd5e1';
+                }
+            });
+
+            // อัปเดตตัวบ่งชี้ชั้นด้านบน
+            const floorIndicator = document.getElementById('current-floor-indicator');
+            if (floorIndicator) {
+                floorIndicator.innerText = `ชั้น ${floorNum}`;
+            }
+
+            // สลับรูปภาพ Overlay แผนที่
+            let imageSource = floorImages[currentFloor] || fallbackBlueprint;
+            map.eachLayer(layer => {
+                if (layer instanceof L.ImageOverlay) {
+                    map.removeLayer(layer);
+                }
+            });
+            L.imageOverlay(imageSource, bounds).addTo(map);
+
+            clearRouting();
+            closeEditorCards();
+            renderAllElements();
+        }
+
+        function openFloorSettings() {
+            closeEditorCards();
+            document.getElementById('floor-settings-card').style.display = 'block';
+            
+            // อัปเดตสถานะป้ายกำกับ
+            for (let i = 1; i <= 3; i++) {
+                const statusEl = document.getElementById(`status-img-${i}`);
+                if (statusEl) {
+                    if (floorImages[i]) {
+                        statusEl.innerText = "(กำหนดภาพแล้ว - Base64)";
+                        statusEl.style.color = "var(--normal-color)";
+                    } else {
+                        statusEl.innerText = "(ตารางพิมพ์เขียวเริ่มต้น)";
+                        statusEl.style.color = "var(--text-muted)";
+                    }
+                }
+            }
+        }
+
+        // จัดการอัปโหลดไฟล์ภาพ
+        function handleFloorImageUpload(event, floorNum) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                floorImages[floorNum] = e.target.result;
+                document.getElementById(`status-img-${floorNum}`).innerText = "(กำหนดเอง - Base64)";
+                document.getElementById(`status-img-${floorNum}`).style.color = "#10b981";
+                
+                // หากกำลังเลือกชั้นนั้นอยู่ ให้โหลดแสดงภาพทันที
+                if (currentFloor === floorNum) {
+                    switchFloor(floorNum);
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // ฟังก์ชันล้างแผนที่เก่า
+        // คอนฟิกบลูทูธไร้สาย (ลิงก์ไปยังฟังก์ชันจริงด้านล่าง)
+        function openBluetoothConfigurator() {
+            currentEditingNodeIdForBT = null;
+            closeEditorCards();
+            if (typeof disconnectBluetooth === 'function') disconnectBluetooth();
+            document.getElementById('bt-configurator-card').style.display = 'block';
+        }
+
+        // --- ลบโค้ดซ้ำซ้อนเก่า ---
+        // (ถูกย้ายไปรวมไว้ที่ส่วนล่างของไฟล์เพื่อให้ทำงานถูกต้อง)
+
+        // นำเข้า JSON
         function importFromJsonFile(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -741,26 +636,57 @@
                 try {
                     const importedData = JSON.parse(e.target.result);
 
-                    if (importedData.nodes && importedData.raw_edges) {
-                        customNodes = importedData.nodes;
-                        customEdges = importedData.raw_edges;
+                    let parsedNodes = null;
+                    let parsedEdges = [];
 
+                    // ตรวจสอบว่าเป็นไฟล์แบคอัพเต็มรูปแบบ (Full Export) หรือไฟล์พิกัดโหนดอย่างเดียว
+                    if (importedData.nodes !== undefined) {
+                        parsedNodes = importedData.nodes;
+                        parsedEdges = importedData.raw_edges || [];
+                    } else if (Object.keys(importedData).length > 0 && typeof importedData[Object.keys(importedData)[0]] === 'object' && importedData[Object.keys(importedData)[0]].x !== undefined) {
+                        // กรณีที่เป็นไฟล์พิกัดล้วน (Legacy nodes_data.json)
+                        parsedNodes = importedData;
+                    }
+
+                    if (parsedNodes) {
+                        customNodes = parsedNodes;
+                        customEdges = parsedEdges;
+
+                        // ถ้ามีตั้งสเกลมาในไฟล์ ให้อัปเดต ถ้าไม่มีให้คงสเกลเดิมที่ผู้ใช้ตั้งไว้ (ไม่ทับ)
                         if (importedData.metersPerUnit !== undefined) {
                             metersPerUnit = parseFloat(importedData.metersPerUnit) || 1.0;
                             isCalibrated = true;
-                        } else {
-                            metersPerUnit = 1.0;
-                            isCalibrated = false;
+                            updateScaleBadge();
                         }
-                        updateScaleBadge();
+
+                        // โหลดข้อมูลรูปภาพแผนที่ (ถ้ามีในไฟล์) หากไม่มี จะคงรูปเดิมที่ผู้ใช้อัปโหลดไว้แยกต่างหาก (ไม่รีเซ็ต)
+                        if (importedData.floorImages && Object.keys(importedData.floorImages).length > 0) {
+                            Object.assign(floorImages, importedData.floorImages);
+                        }
+
+                        // ตรวจสอบความเข้ากันได้ย้อนหลัง (ผูกชั้น 1 เป็นค่าเริ่มต้นหากโหนดเก่าไม่มีคีย์ชั้น)
+                        Object.keys(customNodes).forEach(id => {
+                            if (customNodes[id].floor === undefined) {
+                                customNodes[id].floor = 1;
+                            }
+                        });
 
                         closeEditorCards();
-                        renderAllElements();
+                        
+                        // ซ่อนหน้าต่างต้อนรับอัตโนมัติ
+                        document.getElementById('startup-overlay').style.display = 'none';
+                        
+                        historyStack = [];
+                        saveStateToHistory();
+                        autoSaveToLocalStorage();
+                        
+                        switchFloor(1); // บังคับสวิตช์มาแสดงชั้น 1 ก่อน
+                        alert("🎉 นำเข้าข้อมูลสำเร็จรวดเดียว!\n\nโหลดข้อมูลรูปภาพแผนที่ (Base64), ตำแหน่งหมุด, การเชื่อมโยงข้ามชั้น, และสเกล กลับมาสมบูรณ์ครบถ้วนในไฟล์เดียวครับ");
                     } else {
-                        alert("รูปแบบไฟล์ JSON ไม่ถูกต้อง");
+                        alert("⚠️ รูปแบบไฟล์ JSON ไม่ถูกต้อง");
                     }
                 } catch (err) {
-                    alert("ไม่สามารถอ่านไฟล์ JSON นี้ได้");
+                    alert("❌ ไม่สามารถอ่านไฟล์ JSON นี้ได้: " + err);
                 }
             };
             reader.readAsText(file);
@@ -768,11 +694,156 @@
             event.target.value = '';
         }
 
+        // ฟังก์ชันล้างและสร้างแผนที่ใหม่จากศูนย์
+        function startFreshMap() {
+            if (!confirm("คุณต้องการล้างแผนที่เดิมและเริ่มสร้างแผนที่ใหม่จากศูนย์ใช่หรือไม่?\nข้อมูลทั้งหมดรวมถึงรูปภาพแผนที่จะสูญหายและไม่สามารถกู้คืนได้")) {
+                return;
+            }
+
+            customNodes = {};
+            customEdges = [];
+            floorImages = {
+                1: '',
+                2: '',
+                3: ''
+            };
+            metersPerUnit = 1.0;
+            isCalibrated = false;
+            myLocationNodeId = null;
+            routingStartNodeId = null;
+            routingEndNodeId = null;
+            selectedNodeForEdge = null;
+
+            // ลบ Markers และ Polylines เดิมออกจากแผนที่
+            Object.values(markersMap).forEach(m => map.removeLayer(m));
+            polylinesArray.forEach(p => map.removeLayer(p));
+            markersMap = {};
+            polylinesArray = [];
+
+            // อัปเดต UI ต่างๆ
+            updateScaleBadge();
+            document.getElementById('json-file-input').value = '';
+            document.getElementById('startup-overlay').style.display = 'none';
+
+            // สลับกลับมาชั้น 1
+            switchFloor(1);
+
+            historyStack = [];
+            saveStateToHistory();
+            autoSaveToLocalStorage();
+
+            // เปิดเมนูอัปโหลดภาพแผนที่ทันทีเพื่อเริ่มสร้าง (UX Guidance)
+            openFloorSettings();
+        }
+
+        // ส่งออก JSON
+        function exportToJsonFile() {
+            let edgeMap = {};
+            Object.keys(customNodes).forEach(id => edgeMap[id] = []);
+            customEdges.forEach(edge => {
+                if (edgeMap[edge.fromId]) edgeMap[edge.fromId].push(edge.toId);
+                if (edgeMap[edge.toId]) edgeMap[edge.toId].push(edge.fromId);
+            });
+
+            const exportData = {
+                studio_version: "2.3-Pro-MultiFloor",
+                export_time: new Date().toISOString(),
+                metersPerUnit: metersPerUnit,
+                floorImages: floorImages,
+                nodes: customNodes,
+                edges_adjacency_list: edgeMap,
+                raw_edges: customEdges
+            };
+
+            const jsonString = JSON.stringify(exportData, null, 2);
+            const blob = new Blob([jsonString], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.href = url;
+            downloadAnchor.download = "indoor_map_data.json";
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            document.body.removeChild(downloadAnchor);
+            URL.revokeObjectURL(url);
+
+            alert("💾 บันทึกและส่งออกแผนที่สำเร็จ!\n\nไฟล์ข้อมูลนำทางอัจฉริยะ 'indoor_map_data.json' ได้รับการส่งออกแล้ว \nระบบได้แพ็ครวม **รูปภาพแผนที่ของทุกชั้น (Base64), พิกัดโหนด, และสเกล** ไว้เป็นก้อนเดียวกันอย่างสมบูรณ์แบบ \nคุณสามารถนำไฟล์นี้ไป Import กลับเข้าเว็บได้รวดเดียวเลยครับ!");
+        }
+
         function deleteEdgeByIndex(index) {
             customEdges.splice(index, 1);
+            saveStateToHistory();
+            autoSaveToLocalStorage();
             renderAllElements();
         }
 
+        function saveStateToHistory() {
+            const state = {
+                nodes: JSON.parse(JSON.stringify(customNodes)),
+                edges: JSON.parse(JSON.stringify(customEdges)),
+                metersPerUnit: metersPerUnit
+            };
+            historyStack.push(state);
+            if(historyStack.length > maxHistory) {
+                historyStack.shift();
+            }
+        }
+
+        function undoAction() {
+            if (historyStack.length > 1) {
+                historyStack.pop(); // เอา state ล่าสุดออก
+                const prevState = historyStack[historyStack.length - 1]; 
+                
+                customNodes = JSON.parse(JSON.stringify(prevState.nodes));
+                customEdges = JSON.parse(JSON.stringify(prevState.edges));
+                metersPerUnit = prevState.metersPerUnit;
+                isCalibrated = metersPerUnit !== 1.0;
+                
+                renderAllElements();
+                updateScaleBadge();
+                autoSaveToLocalStorage();
+            } else {
+                alert('ถึงจุดเริ่มต้นแล้ว ไม่สามารถย้อนกลับได้อีก');
+            }
+        }
+
+        function autoSaveToLocalStorage() {
+            const exportData = {
+                studio_version: "2.3-Pro-MultiFloor",
+                metersPerUnit: metersPerUnit,
+                nodes: customNodes,
+                edges: customEdges
+            };
+            localStorage.setItem('indoorMapAutoSave', JSON.stringify(exportData));
+        }
+
+        function loadFromAutoSave() {
+            const saved = localStorage.getItem('indoorMapAutoSave');
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    customNodes = data.nodes || {};
+                    customEdges = data.edges || [];
+                    metersPerUnit = data.metersPerUnit || 1.0;
+                    
+                    document.getElementById('startup-overlay').style.display = 'none';
+                    isCalibrated = metersPerUnit !== 1.0;
+                    updateScaleBadge();
+                    
+                    historyStack = [];
+                    saveStateToHistory();
+                    
+                    switchFloor(1);
+                    renderAllElements();
+                } catch(e) {
+                    console.error('Error parsing autosave', e);
+                }
+            } else {
+                alert('ไม่พบข้อมูล Auto-Save ในเครื่องของคุณ');
+            }
+        }
+
+        // วาดส่วนประกอบทั้งหมดลง Leaflet Map
         function renderAllElements() {
             Object.values(markersMap).forEach(m => map.removeLayer(m));
             polylinesArray.forEach(p => map.removeLayer(p));
@@ -783,55 +854,102 @@
             customEdges.forEach((edge, index) => {
                 const fromNode = customNodes[edge.fromId];
                 const toNode = customNodes[edge.toId];
+                
                 if (fromNode && toNode) {
                     const isDeleteMode = (currentMode === 'deleteEdge');
+                    const sameFloor = (fromNode.floor === currentFloor && toNode.floor === currentFloor);
+                    const leadsToCurrentFloor = (fromNode.floor === currentFloor || toNode.floor === currentFloor);
 
-                    const polyline = L.polyline([
-                        toLatLng(fromNode.x, fromNode.y),
-                        toLatLng(toNode.x, toNode.y)
-                    ], {
-                        color: isDeleteMode ? '#f57c00' : '#475569',
-                        weight: isDeleteMode ? 5 : 3,
-                        opacity: 0.8
-                    }).addTo(map);
+                    // วาดถ้าอยู่ในชั้นนี้ หรือมีส่วนเชื่อมโยงมายังชั้นนี้ (เช่น บันไดข้ามชั้น)
+                    if (sameFloor) {
+                        const polyline = L.polyline([
+                            toLatLng(fromNode.x, fromNode.y),
+                            toLatLng(toNode.x, toNode.y)
+                        ], {
+                            color: isDeleteMode ? '#f57c00' : '#475569',
+                            weight: isDeleteMode ? 5 : 3,
+                            opacity: 0.8
+                        }).addTo(map);
 
-                    const distUnits = Math.sqrt((toNode.x - fromNode.x) ** 2 + (toNode.y - fromNode.y) ** 2);
-                    const distMeters = distUnits * metersPerUnit;
-                    const tooltipText = `${distMeters.toFixed(2)} ม. (${distUnits.toFixed(1)} unit)`;
+                        const distUnits = Math.sqrt((toNode.x - fromNode.x) ** 2 + (toNode.y - fromNode.y) ** 2);
+                        const distMeters = distUnits * metersPerUnit;
+                        const tooltipText = `${distMeters.toFixed(2)} ม. (${distUnits.toFixed(1)} unit)`;
 
-                    polyline.bindTooltip(tooltipText, {
-                        sticky: true,
-                        className: 'edge-tooltip'
-                    });
+                        polyline.bindTooltip(tooltipText, {
+                            sticky: true,
+                            className: 'edge-tooltip'
+                        });
 
-                    polyline.on('click', (e) => {
-                        if (currentMode === 'deleteEdge') {
-                            L.DomEvent.stopPropagation(e);
-                            deleteEdgeByIndex(index);
-                        }
-                    });
+                        polyline.on('click', (e) => {
+                            if (currentMode === 'deleteEdge') {
+                                L.DomEvent.stopPropagation(e);
+                                deleteEdgeByIndex(index);
+                            }
+                        });
 
-                    polylinesArray.push(polyline);
+                        polylinesArray.push(polyline);
+                    } 
+                    // แสดงจุดข้ามชั้นด้วยสไตล์เฉพาะ (Dotted Line)
+                    else if (leadsToCurrentFloor) {
+                        const polyline = L.polyline([
+                            toLatLng(fromNode.x, fromNode.y),
+                            toLatLng(toNode.x, toNode.y)
+                        ], {
+                            color: '#7b1fa2', // สีบันไดข้ามชั้น
+                            weight: 3,
+                            dashArray: '5, 8',
+                            opacity: 0.6
+                        }).addTo(map);
+
+                        const otherFloor = (fromNode.floor === currentFloor) ? toNode.floor : fromNode.floor;
+                        polyline.bindTooltip(`บันได/ลิฟต์เชื่อมไปยังชั้น ${otherFloor}`, {
+                            sticky: true,
+                            className: 'edge-tooltip'
+                        });
+                        
+                        polyline.on('click', (e) => {
+                            if (currentMode === 'deleteEdge') {
+                                L.DomEvent.stopPropagation(e);
+                                deleteEdgeByIndex(index);
+                            }
+                        });
+
+                        polylinesArray.push(polyline);
+                    }
                 }
             });
 
-            // วาดหมุด (Markers)
+            // วาดหมุดโหนด (Markers) - วาดเฉพาะโหนดที่ตรงกับชั้นที่เลือก
             Object.keys(customNodes).forEach(key => {
                 const node = customNodes[key];
+                
+                // เฉพาะโหนดในชั้นปัจจุบันเท่านั้นที่วาดแสดงผล
+                if (node.floor !== currentFloor) return;
+
                 const pos = toLatLng(node.x, node.y);
 
-                const customIcon = L.divIcon({
-                    className: 'custom-marker-wrapper',
-                    html: `
+                const isWaypoint = node.type === 'waypoint';
+                
+                let htmlContent = '';
+                if (isWaypoint) {
+                    const isSelected = (selectedNodeForEdge === node.id || myLocationNodeId === node.id) ? 'box-shadow: 0 0 0 4px rgba(255,152,0,0.5);' : '';
+                    const color = selectedNodeForEdge === node.id ? '#ff9800' : '#94a3b8';
+                    htmlContent = `<div style="width: 12px; height: 12px; background: ${color}; border-radius: 50%; border: 2px solid white; ${isSelected}"></div>`;
+                } else {
+                    htmlContent = `
                     <div class="custom-node-html">
-                        ${getNodeIconHtml(node.type, node.id)}
+                        ${getNodeIconHtml(node.type, node.id, node.beaconMajor, node.beaconMinor)}
                         <div class="node-label" style="border-top: 3px solid ${getNodeColor(node.type, node.id)}">
                             ${node.name}<br>(${node.x}, ${node.y})
                         </div>
-                    </div>
-                `,
-                    iconSize: [70, 45],
-                    iconAnchor: [35, 8]
+                    </div>`;
+                }
+
+                const customIcon = L.divIcon({
+                    className: 'custom-marker-wrapper',
+                    html: htmlContent,
+                    iconSize: isWaypoint ? [12, 12] : [70, 45],
+                    iconAnchor: isWaypoint ? [6, 6] : [35, 8]
                 });
 
                 const marker = L.marker(pos, { icon: customIcon, draggable: (currentMode === 'addAndDrag') }).addTo(map);
@@ -859,17 +977,20 @@
                         document.getElementById('edit-node-x').value = node.x;
                         document.getElementById('edit-node-y').value = node.y;
                     }
+                    saveStateToHistory();
+                    autoSaveToLocalStorage();
                     renderAllElements();
                 });
             });
 
-            // วาดเส้นทางคำนวณ Dijkstra
+            // วาดเส้นทางคำนวณ Dijkstra (ถ้ากำลังทดสอบหาเส้นทาง)
             const routeCard = document.getElementById('routing-card');
             const routeInfo = document.getElementById('route-info-detail');
 
             if (routingStartNodeId && routingEndNodeId) {
                 const routeResult = findShortestPath(routingStartNodeId, routingEndNodeId);
                 if (routeResult) {
+                    // กรองจุดนำทางวาดเฉพาะในชั้นนี้
                     const latlngs = routeResult.path.map(id => {
                         const n = customNodes[id];
                         return toLatLng(n.x, n.y);
@@ -888,17 +1009,17 @@
                     routeInfo.innerHTML = `
                     <div style="margin-bottom: 8px;">
                         <span style="background-color: #3b82f6; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: 6px;">ต้นทาง</span>
-                        <strong>${customNodes[routingStartNodeId].name}</strong>
+                        <strong>${customNodes[routingStartNodeId].name} (ชั้น ${customNodes[routingStartNodeId].floor})</strong>
                     </div>
                     <div style="margin-bottom: 12px;">
                         <span style="background-color: #10b981; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: 6px;">ปลายทาง</span>
-                        <strong>${customNodes[routingEndNodeId].name}</strong>
+                        <strong>${customNodes[routingEndNodeId].name} (ชั้น ${customNodes[routingEndNodeId].floor})</strong>
                     </div>
                     <div style="border-top: 1px solid #e2e8f0; padding-top: 10px; font-size: 16px; color: #10b981; font-weight: 800; display: flex; align-items: center; gap: 6px;" class="pulse-effect">
                         <i class="fa-solid fa-walking"></i> ระยะทางรวม: ${routeResult.distanceMeters.toFixed(2)} เมตร
                     </div>
                     <div style="font-size: 11px; color: #64748b; margin-top: 4px;">
-                        (ระยะทางในแผนที่: ${routeResult.distanceUnits.toFixed(2)} units)
+                        (ประมวลผลผ่านบันได/ลิฟต์สำเร็จ)
                     </div>
                 `;
                     routeCard.style.display = 'block';
@@ -913,7 +1034,7 @@
                         <strong>${customNodes[routingEndNodeId].name}</strong>
                     </div>
                     <div style="color: #ef4444; font-weight: bold; margin-top: 10px;">
-                        <i class="fa-solid fa-triangle-exclamation"></i> ไม่พบเส้นทางเชื่อมต่อกัน
+                        <i class="fa-solid fa-triangle-exclamation"></i> ไม่พบเส้นทางข้ามชั้นเชื่อมต่อกัน
                     </div>
                 `;
                     routeCard.style.display = 'block';
@@ -952,6 +1073,27 @@
                 openCreateCard(coords.x, coords.y);
             } else if (currentMode === 'calibrate') {
                 handleCalibrationClick(coords.x, coords.y);
+            } else if (currentMode === 'quickPath') {
+                if (selectedNodeForEdge) {
+                    const newId = `wp_${Date.now()}`;
+                    customNodes[newId] = {
+                        id: newId,
+                        name: 'จุดเลี้ยว',
+                        x: coords.x,
+                        y: coords.y,
+                        type: 'waypoint',
+                        floor: currentFloor,
+                        beaconMajor: null,
+                        beaconMinor: null
+                    };
+                    customEdges.push({ fromId: selectedNodeForEdge, toId: newId });
+                    selectedNodeForEdge = newId;
+                    saveStateToHistory();
+                    autoSaveToLocalStorage();
+                    renderAllElements();
+                } else {
+                    alert('📌 กรุณาคลิกเลือกจุดเริ่มต้น (โหนดห้องหรือจุดอื่นๆ) ก่อนที่จะลากวาดเส้นทางด่วนครับ');
+                }
             }
         });
 
@@ -959,6 +1101,8 @@
             document.getElementById('create-node-card').style.display = 'none';
             document.getElementById('edit-node-card').style.display = 'none';
             document.getElementById('calibration-card').style.display = 'none';
+            document.getElementById('floor-settings-card').style.display = 'none';
+            document.getElementById('bt-configurator-card').style.display = 'none';
 
             if (currentMode !== 'calibrate') {
                 resetCalibration();
@@ -967,8 +1111,20 @@
 
         function openCreateCard(x, y) {
             closeEditorCards();
+            
+            let maxMinor = 0;
+            Object.values(customNodes).forEach(node => {
+                if (node.floor === currentFloor && node.beaconMinor !== null && node.beaconMinor > maxMinor) {
+                    maxMinor = node.beaconMinor;
+                }
+            });
+            let nextMinor = maxMinor > 0 ? maxMinor + 1 : (currentFloor * 100 + 1);
+
             document.getElementById('new-node-name').value = `Node_${Object.keys(customNodes).length + 1}`;
             document.getElementById('new-node-type').value = 'normal';
+            document.getElementById('new-node-major').value = currentFloor; // แนะนำค่า Major ตามชั้นปัจจุบัน
+            document.getElementById('new-node-minor').value = nextMinor;
+            document.getElementById('new-node-mac').value = '';
             document.getElementById('new-node-x').value = x;
             document.getElementById('new-node-y').value = y;
             document.getElementById('create-node-card').style.display = 'block';
@@ -980,13 +1136,61 @@
             const type = document.getElementById('new-node-type').value;
             const x = parseFloat(document.getElementById('new-node-x').value);
             const y = parseFloat(document.getElementById('new-node-y').value);
+            const major = document.getElementById('new-node-major').value;
+            const minor = document.getElementById('new-node-minor').value;
 
             if (!name) return;
 
             const newId = `node_${Date.now()}`;
-            customNodes[newId] = { id: newId, name: name, x: x, y: y, type: type };
+            customNodes[newId] = {
+                id: newId,
+                name: name,
+                x: x,
+                y: y,
+                type: type,
+                floor: currentFloor, // บันทึกตามชั้นขณะสร้าง
+                beaconMajor: major !== "" ? parseInt(major) : null,
+                beaconMinor: minor !== "" ? parseInt(minor) : null,
+                macAddress: document.getElementById('new-node-mac').value.trim() !== "" ? document.getElementById('new-node-mac').value.trim() : null
+            };
             closeEditorCards();
+            saveStateToHistory();
+            autoSaveToLocalStorage();
             renderAllElements();
+        }
+
+        function toggleInterFloorSelect(nodeType) {
+            const interFloorGroup = document.getElementById('edit-interfloor-group');
+            const selectEl = document.getElementById('edit-node-interfloor');
+            
+            if (nodeType === 'stairs' || nodeType === 'elevator') {
+                interFloorGroup.style.display = 'block';
+                
+                // ดึงข้อมูลโหนดประเภทลิฟต์/บันไดในชั้นอื่น มาสร้างออปชั่น
+                selectEl.innerHTML = '<option value="">-- ไม่เชื่อมโยงข้ามชั้น --</option>';
+                const editNodeId = document.getElementById('edit-node-id').value;
+                
+                Object.values(customNodes).forEach(n => {
+                    if (n.id !== editNodeId && n.floor !== currentFloor && (n.type === 'stairs' || n.type === 'elevator')) {
+                        const opt = document.createElement('option');
+                        opt.value = n.id;
+                        opt.innerText = `${n.name} (ชั้น ${n.floor} - ${n.type === 'stairs' ? 'บันได' : 'ลิฟต์'})`;
+                        
+                        // ตรวจสอบว่ามีเส้นเชื่อมเดิมอยู่แล้วหรือไม่ เพื่อ Select อัตโนมัติ
+                        const alreadyConnected = customEdges.some(edge => 
+                            (edge.fromId === editNodeId && edge.toId === n.id) || 
+                            (edge.fromId === n.id && edge.toId === editNodeId)
+                        );
+                        if (alreadyConnected) {
+                            opt.selected = true;
+                        }
+                        
+                        selectEl.appendChild(opt);
+                    }
+                });
+            } else {
+                interFloorGroup.style.display = 'none';
+            }
         }
 
         function openEditCard(node) {
@@ -994,27 +1198,62 @@
             document.getElementById('edit-node-id').value = node.id;
             document.getElementById('edit-node-name').value = node.name;
             document.getElementById('edit-node-type').value = node.type;
+            document.getElementById('edit-node-major').value = node.beaconMajor !== null ? node.beaconMajor : '';
+            document.getElementById('edit-node-minor').value = node.beaconMinor !== null ? node.beaconMinor : '';
+            document.getElementById('edit-node-mac').value = node.macAddress !== undefined && node.macAddress !== null ? node.macAddress : '';
             document.getElementById('edit-node-x').value = node.x;
             document.getElementById('edit-node-y').value = node.y;
             document.getElementById('edit-node-card').style.display = 'block';
+            
+            toggleInterFloorSelect(node.type);
         }
 
         function updateNodeDetails() {
             const id = document.getElementById('edit-node-id').value;
             const name = document.getElementById('edit-node-name').value.trim();
             const type = document.getElementById('edit-node-type').value;
+            const major = document.getElementById('edit-node-major').value;
+            const minor = document.getElementById('edit-node-minor').value;
             const x = parseFloat(document.getElementById('edit-node-x').value);
             const y = parseFloat(document.getElementById('edit-node-y').value);
+            
+            const targetInterFloorId = document.getElementById('edit-node-interfloor').value;
 
             if (!name || isNaN(x) || isNaN(y)) return;
 
             if (customNodes[id]) {
                 customNodes[id].name = name;
                 customNodes[id].type = type;
+                customNodes[id].beaconMajor = major !== "" ? parseInt(major) : null;
+                customNodes[id].beaconMinor = minor !== "" ? parseInt(minor) : null;
+                const macAddress = document.getElementById('edit-node-mac').value.trim();
+                customNodes[id].macAddress = macAddress !== "" ? macAddress : null;
                 customNodes[id].x = Math.max(0, Math.min(MAP_WIDTH, x));
                 customNodes[id].y = Math.max(0, Math.min(MAP_HEIGHT, y));
+                
+                // ระบบบันทึกการเชื่อมโยงข้ามชั้น
+                if (type === 'stairs' || type === 'elevator') {
+                    // ลบความเชื่อมโยงข้ามชั้นเดิมที่มีโหนด id นี้คู่กับโหนดอื่นนอกชั้นออกก่อน
+                    customEdges = customEdges.filter(edge => {
+                        const fromNode = customNodes[edge.fromId];
+                        const toNode = customNodes[edge.toId];
+                        if (!fromNode || !toNode) return true;
+                        
+                        // กรองลบออกเฉพาะเส้นข้ามชั้นที่เชื่อมตัวนี้
+                        const involvesThisNode = (edge.fromId === id || edge.toId === id);
+                        const isInterFloor = (fromNode.floor !== toNode.floor);
+                        return !(involvesThisNode && isInterFloor);
+                    });
+                    
+                    // แอดเส้นเชื่อมข้ามชั้นตัวใหม่ (ถ้าถูกเลือก)
+                    if (targetInterFloorId) {
+                        customEdges.push({ fromId: id, toId: targetInterFloorId });
+                    }
+                }
             }
             closeEditorCards();
+            saveStateToHistory();
+            autoSaveToLocalStorage();
             renderAllElements();
         }
 
@@ -1027,22 +1266,38 @@
                 if (routingStartNodeId === node.id) routingStartNodeId = null;
                 if (routingEndNodeId === node.id) routingEndNodeId = null;
                 closeEditorCards();
+                saveStateToHistory();
+                autoSaveToLocalStorage();
                 renderAllElements();
                 return;
             }
 
-            if (currentMode === 'connectLines') {
+            if (currentMode === 'connectLines' || currentMode === 'quickPath') {
                 if (selectedNodeForEdge === null) {
                     selectedNodeForEdge = node.id;
                     renderAllElements();
                 } else {
                     if (selectedNodeForEdge === node.id) {
+                        // กดซ้ำที่โหนดเดิมที่เลือกไว้ (สีส้ม) เพื่อยกเลิกการลากเส้น
                         selectedNodeForEdge = null;
                         renderAllElements();
                         return;
                     }
-                    customEdges.push({ fromId: selectedNodeForEdge, toId: node.id });
-                    selectedNodeForEdge = null;
+                    
+                    // ตรวจสอบว่ามีเส้นเชื่อมนี้อยู่แล้วหรือไม่ เพื่อป้องกันการวาดเส้นซ้ำซ้อน
+                    const edgeExists = customEdges.some(e => 
+                        (e.fromId === selectedNodeForEdge && e.toId === node.id) || 
+                        (e.fromId === node.id && e.toId === selectedNodeForEdge)
+                    );
+                    
+                    if (!edgeExists) {
+                        customEdges.push({ fromId: selectedNodeForEdge, toId: node.id });
+                    }
+                    
+                    // อัปเกรดให้ลากเส้นต่อเนื่องได้เลย: เปลี่ยนจุดเริ่มต้นเป็นจุดปลายทางล่าสุด
+                    selectedNodeForEdge = node.id;
+                    saveStateToHistory();
+                    autoSaveToLocalStorage();
                     renderAllElements();
                 }
                 return;
@@ -1077,44 +1332,38 @@
             }
         }
 
-        function exportToJsonFile() {
-            let edgeMap = {};
-            Object.keys(customNodes).forEach(id => edgeMap[id] = []);
-            customEdges.forEach(edge => {
-                if (edgeMap[edge.fromId]) edgeMap[edge.fromId].push(edge.toId);
-                if (edgeMap[edge.toId]) edgeMap[edge.toId].push(edge.fromId);
-            });
-
-            const exportData = {
-                studio_version: "2.1-Pro",
-                export_time: new Date().toISOString(),
-                metersPerUnit: metersPerUnit,
-                nodes: customNodes,
-                edges_adjacency_list: edgeMap,
-                raw_edges: customEdges
-            };
-
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
-            const downloadAnchor = document.createElement('a');
-            downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", "indoor_map_data.json");
-            document.body.appendChild(downloadAnchor);
-            downloadAnchor.click();
-            downloadAnchor.remove();
-        }
-
         // ==========================================
         // Calibration Functions
         // ==========================================
         function updateScaleBadge() {
-            const badge = document.getElementById('scale-badge');
-            const badgeText = document.getElementById('scale-badge-text');
+            const icon = document.getElementById('calib-indicator-icon');
+            const statusText = document.getElementById('calib-status-text');
+            const descText = document.getElementById('calib-desc-text');
+            
             if (isCalibrated) {
-                badge.classList.add('calibrated');
-                badgeText.innerHTML = `สเกล: 1 unit = ${metersPerUnit.toFixed(2)} ม.`;
+                if (icon) {
+                    icon.className = "fa-solid fa-circle-check";
+                    icon.style.color = "var(--normal-color)";
+                }
+                if (statusText) {
+                    statusText.innerText = "กำหนดสเกลแล้ว";
+                    statusText.style.color = "var(--normal-color)";
+                }
+                if (descText) {
+                    descText.innerText = `1 unit = ${metersPerUnit.toFixed(2)} เมตร`;
+                }
             } else {
-                badge.classList.remove('calibrated');
-                badgeText.innerHTML = `ยังไม่ได้คาลิเบรต (1.00 ม./หน่วย)`;
+                if (icon) {
+                    icon.className = "fa-solid fa-circle-xmark";
+                    icon.style.color = "var(--delete-color)";
+                }
+                if (statusText) {
+                    statusText.innerText = "ยังไม่ได้คาลิเบรต";
+                    statusText.style.color = "var(--text-muted)";
+                }
+                if (descText) {
+                    descText.innerText = "(สเกลเริ่มต้น 1.00 ม./หน่วย)";
+                }
             }
         }
 
@@ -1245,6 +1494,8 @@
                 updateScaleBadge();
                 resetCalibration();
                 closeEditorCards();
+                saveStateToHistory();
+                autoSaveToLocalStorage();
                 renderAllElements();
                 alert(`ตั้งค่าสเกลสำเร็จ: 1 unit = ${metersPerUnit.toFixed(3)} เมตร`);
             }
@@ -1302,6 +1553,8 @@
 
                     const currentCoords = customNodes[current];
                     const neighborCoords = customNodes[neighbor];
+                    
+                    // คำนวณระยะขจัด 2 มิติ
                     const dist = Math.sqrt((neighborCoords.x - currentCoords.x) ** 2 + (neighborCoords.y - currentCoords.y) ** 2);
 
                     const alt = distances[current] + dist;
@@ -1338,6 +1591,362 @@
         function closeRouting() {
             clearRouting();
             setMode('addAndDrag');
+        }
+
+        // ==========================================
+        // Web Bluetooth Configurator
+        // ==========================================
+        // ==========================================
+        // Direct Quick Sync (Bluetooth & USB)
+        // ==========================================
+        
+        function generateMajorMinorForEdit() {
+            let maxMinor = 0;
+            Object.values(customNodes).forEach(node => {
+                if (node.floor === currentFloor && node.beaconMinor !== null && node.beaconMinor > maxMinor) {
+                    maxMinor = node.beaconMinor;
+                }
+            });
+            let nextMinor = maxMinor > 0 ? maxMinor + 1 : (currentFloor * 100 + 1);
+            document.getElementById('edit-node-major').value = currentFloor;
+            document.getElementById('edit-node-minor').value = nextMinor;
+        }
+
+        async function quickSyncBT() {
+            const btn = document.getElementById('btn-quick-sync-bt');
+            const originalText = btn.innerHTML;
+            
+            try {
+                // 1. ถ้ารหัสยังว่างอยู่ ให้สร้างอัตโนมัติแบบไม่ซ้ำ
+                let major = document.getElementById('edit-node-major').value;
+                let minor = document.getElementById('edit-node-minor').value;
+                
+                if (!major || !minor) {
+                    let maxMinor = 0;
+                    Object.values(customNodes).forEach(node => {
+                        if (node.floor === currentFloor && node.beaconMinor !== null && node.beaconMinor > maxMinor) {
+                            maxMinor = node.beaconMinor;
+                        }
+                    });
+                    minor = maxMinor > 0 ? maxMinor + 1 : (currentFloor * 100 + 1);
+                    major = currentFloor;
+                    
+                    document.getElementById('edit-node-major').value = major;
+                    document.getElementById('edit-node-minor').value = minor;
+                }
+
+                // 2. ขอเชื่อมต่อ Bluetooth
+                btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> สแกน...";
+                const device = await navigator.bluetooth.requestDevice({
+                    filters: [{ namePrefix: 'Indoor-Beacon' }],
+                    optionalServices: ['0000ffe0-0000-1000-8000-00805f9b34fb']
+                });
+
+                btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> กำลังเชื่อมต่อ...";
+                const server = await device.gatt.connect();
+                const service = await server.getPrimaryService('0000ffe0-0000-1000-8000-00805f9b34fb');
+                const configCharacteristic = await service.getCharacteristic('0000ffe1-0000-1000-8000-00805f9b34fb');
+
+                // 3. ดึงชื่ออุปกรณ์มาใส่ในช่อง MAC Address ทันที
+                if (device.name) {
+                    document.getElementById('edit-node-mac').value = device.name;
+                }
+
+                // 4. บันทึกข้อมูลลง Node บนแผนที่ + History + AutoSave ทันที
+                btn.innerHTML = "<i class='fa-solid fa-floppy-disk'></i> กำลังบันทึก...";
+                updateNodeDetails(); // ฟังก์ชันนี้จะเซฟและปิดหน้าต่าง Edit ให้อัตโนมัติ
+
+                // 5. ส่งข้อมูลไปยังบอร์ด
+                const cmd = `S:${major},${minor}`;
+                const encoder = new TextEncoder('utf-8');
+                const data = encoder.encode(cmd);
+                
+                if (configCharacteristic.writeValueWithResponse) {
+                    await configCharacteristic.writeValueWithResponse(data);
+                } else if (configCharacteristic.writeValueWithoutResponse) {
+                    await configCharacteristic.writeValueWithoutResponse(data);
+                } else {
+                    await configCharacteristic.writeValue(data);
+                }
+
+                // สั่งตัดการเชื่อมต่อ
+                device.gatt.disconnect();
+                alert(`✅ ซิงค์บลูทูธสำเร็จ!\n\nบอร์ด ESP32 ได้รับพิกัด M=${major}, N=${minor}\nและชื่อบอร์ด "${device.name}" ถูกบันทึกลงในโหนดแล้ว`);
+
+            } catch (error) {
+                console.error(error);
+                if (error.name !== 'NotFoundError') {
+                    alert("เกิดข้อผิดพลาดในการเชื่อมต่อบลูทูธ: " + error.message);
+                }
+            } finally {
+                btn.innerHTML = originalText;
+            }
+        }
+
+        async function quickSyncUSB() {
+            const btn = document.getElementById('btn-quick-sync-usb');
+            const originalText = btn.innerHTML;
+            
+            try {
+                let major = document.getElementById('edit-node-major').value;
+                let minor = document.getElementById('edit-node-minor').value;
+                let mac = document.getElementById('edit-node-mac').value.trim();
+                let name = document.getElementById('edit-node-name').value;
+                
+                if (!major || !minor) {
+                    let maxMinor = 0;
+                    Object.values(customNodes).forEach(node => {
+                        if (node.floor === currentFloor && node.beaconMinor !== null && node.beaconMinor > maxMinor) {
+                            maxMinor = node.beaconMinor;
+                        }
+                    });
+                    minor = maxMinor > 0 ? maxMinor + 1 : (currentFloor * 100 + 1);
+                    major = currentFloor;
+                    
+                    document.getElementById('edit-node-major').value = major;
+                    document.getElementById('edit-node-minor').value = minor;
+                }
+
+                const port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 115200 });
+
+                let finalName = mac || ("Indoor-Beacon-" + name);
+                document.getElementById('edit-node-mac').value = finalName;
+                
+                updateNodeDetails(); // บันทึกลงแผนที่ทันที
+                
+                let cmd = `SERIAL_SET:M=${major},N=${minor},NAME=${finalName}\n`;
+                const textEncoder = new TextEncoderStream();
+                const writableStreamClosed = textEncoder.readable.pipeTo(port.writable);
+                const writer = textEncoder.writable.getWriter();
+                await writer.write(cmd);
+                writer.close();
+                await writableStreamClosed;
+
+                await port.close();
+                alert(`✅ ซิงค์ผ่านสาย USB สำเร็จ!\nบอร์ดได้รับพิกัดและชื่อ "${finalName}" เรียบร้อยแล้ว`);
+
+            } catch (error) {
+                console.error(error);
+                if (error.name !== 'NotFoundError') {
+                    alert("เกิดข้อผิดพลาดในการเชื่อมต่อ USB: " + error.message);
+                }
+            } finally {
+                btn.innerHTML = originalText;
+            }
+        }
+
+        function openBTConfiguratorFromEdit() {
+            currentEditingNodeIdForBT = document.getElementById('edit-node-id').value;
+            const name = document.getElementById('edit-node-name').value;
+            let major = document.getElementById('edit-node-major').value;
+            let minor = document.getElementById('edit-node-minor').value;
+            
+            closeEditorCards();
+            
+            // ถ้ารหัสยังว่างอยู่ ให้สร้างอัตโนมัติแบบไม่ซ้ำ
+            if (!major || !minor) {
+                let maxMinor = 0;
+                Object.values(customNodes).forEach(node => {
+                    if (node.floor === currentFloor && node.beaconMinor !== null && node.beaconMinor > maxMinor) {
+                        maxMinor = node.beaconMinor;
+                    }
+                });
+                minor = maxMinor > 0 ? maxMinor + 1 : (currentFloor * 100 + 1);
+                major = currentFloor;
+            }
+            
+            document.getElementById('bt-input-name').value = name;
+            document.getElementById('bt-input-major').value = major;
+            document.getElementById('bt-input-minor').value = minor;
+            
+            document.getElementById('bt-configurator-card').style.display = 'block';
+        }
+
+        async function connectBluetooth() {
+            try {
+                // ค้นหาเฉพาะบอร์ดที่ชื่อนำหน้าด้วย Indoor-Beacon- เท่านั้น
+                const device = await navigator.bluetooth.requestDevice({
+                    filters: [{ namePrefix: 'Indoor-Beacon' }],
+                    optionalServices: ['0000ffe0-0000-1000-8000-00805f9b34fb']
+                });
+
+                bluetoothDevice = device;
+                document.getElementById('bt-device-info').innerText = "กำลังเชื่อมต่อ...";
+                
+                const server = await device.gatt.connect();
+                const service = await server.getPrimaryService('0000ffe0-0000-1000-8000-00805f9b34fb');
+                configCharacteristic = await service.getCharacteristic('0000ffe1-0000-1000-8000-00805f9b34fb');
+
+                // อ่านค่าพิกัดปัจจุบัน
+                const value = await configCharacteristic.readValue();
+                const decoder = new TextDecoder('utf-8');
+                const currStr = decoder.decode(value); 
+                
+                document.getElementById('bt-connected-panel').style.display = 'block';
+                document.getElementById('bt-device-name').innerText = device.name;
+                document.getElementById('bt-device-info').innerText = currStr.replace("CURR:", "");
+                
+                // --- ดึงชื่ออุปกรณ์ ---
+                document.getElementById('bt-input-name').value = device.name;
+                
+                // --- Generate Major/Minor อัตโนมัติถ้ายังว่างอยู่ ---
+                if (!document.getElementById('bt-input-major').value || !document.getElementById('bt-input-minor').value) {
+                    let maxMinor = 0;
+                    Object.values(customNodes).forEach(node => {
+                        if (node.floor === currentFloor && node.beaconMinor !== null && node.beaconMinor > maxMinor) {
+                            maxMinor = node.beaconMinor;
+                        }
+                    });
+                    let nextMinor = maxMinor > 0 ? maxMinor + 1 : (currentFloor * 100 + 1);
+                    
+                    document.getElementById('bt-input-major').value = currentFloor;
+                    document.getElementById('bt-input-minor').value = nextMinor;
+                }
+                // ---------------------------------------------
+                
+                document.getElementById('btn-bt-connect').style.display = 'none';
+                document.getElementById('btn-bt-disconnect').style.display = 'block';
+                document.getElementById('btn-bt-save').disabled = false;
+                
+                device.addEventListener('gattserverdisconnected', disconnectBluetooth);
+
+            } catch (error) {
+                console.error(error);
+                if (error.name === 'NotFoundError') {
+                    alert("ยกเลิกการเชื่อมต่อ หรือไม่พบบอร์ด ESP32 ที่อยู่ใกล้เคียง");
+                } else if (error.name === 'NotSupportedError') {
+                    alert("เบราว์เซอร์นี้ไม่รองรับ Web Bluetooth กรุณาใช้ Chrome หรือ Edge และเข้าใช้งานผ่าน https:// หรือ localhost");
+                } else {
+                    alert("เกิดข้อผิดพลาดในการเชื่อมต่อบลูทูธ: " + error.message);
+                }
+            }
+        }
+
+        function disconnectBluetooth() {
+            if (bluetoothDevice && bluetoothDevice.gatt.connected) {
+                bluetoothDevice.gatt.disconnect();
+            }
+            bluetoothDevice = null;
+            configCharacteristic = null;
+            
+            document.getElementById('bt-connected-panel').style.display = 'none';
+            document.getElementById('btn-bt-connect').style.display = 'block';
+            document.getElementById('btn-bt-disconnect').style.display = 'none';
+            document.getElementById('btn-bt-save').disabled = true;
+        }
+
+        function autoGenerateBtConfigId() {
+            let maxMinor = 0;
+            Object.values(customNodes).forEach(node => {
+                if (node.floor === currentFloor && node.beaconMinor !== null && node.beaconMinor > maxMinor) {
+                    maxMinor = node.beaconMinor;
+                }
+            });
+            let nextMinor = maxMinor > 0 ? maxMinor + 1 : (currentFloor * 100 + 1);
+            
+            document.getElementById('bt-input-major').value = currentFloor;
+            document.getElementById('bt-input-minor').value = nextMinor;
+        }
+
+        async function writeBluetoothConfig() {
+            if (!configCharacteristic) return;
+            
+            const major = document.getElementById('bt-input-major').value;
+            const minor = document.getElementById('bt-input-minor').value;
+            
+            if (!major || !minor) {
+                alert("กรุณาระบุรหัส Major และ Minor ให้ครบถ้วน");
+                return;
+            }
+
+            // ใช้รูปแบบสั้นพิเศษ: S:Major,Minor
+            let cmd = `S:${major},${minor}`;
+
+            try {
+                const encoder = new TextEncoder('utf-8');
+                const data = encoder.encode(cmd);
+                
+                // --- บันทึกข้อมูลลงโหนดทันที ก่อนส่งเข้าบอร์ด (เพื่อรับประกันว่า UI จะจำค่าได้เสมอ) ---
+                if (currentEditingNodeIdForBT && customNodes[currentEditingNodeIdForBT]) {
+                    customNodes[currentEditingNodeIdForBT].beaconMajor = parseInt(major);
+                    customNodes[currentEditingNodeIdForBT].beaconMinor = parseInt(minor);
+                    
+                    saveStateToHistory();
+                    autoSaveToLocalStorage();
+                    renderAllElements();
+                }
+
+                // ใช้ writeValueWithResponse หรือ writeValueWithoutResponse ตาม API ใหม่
+                if (configCharacteristic.writeValueWithResponse) {
+                    await configCharacteristic.writeValueWithResponse(data);
+                } else if (configCharacteristic.writeValueWithoutResponse) {
+                    await configCharacteristic.writeValueWithoutResponse(data);
+                } else {
+                    await configCharacteristic.writeValue(data);
+                }
+                
+                alert(`✅ ส่งข้อมูลสำเร็จและบันทึกลงโหนดเรียบร้อย!\n\nบอร์ด ESP32 ได้รับพิกัด M=${major}, N=${minor}\nบอร์ดกำลังเริ่มต้นทำงานใหม่...`);
+                
+                disconnectBluetooth();
+                closeEditorCards();
+            } catch (error) {
+                console.error(error);
+                alert("เกิดข้อผิดพลาดในการส่งข้อมูลไปยังบอร์ด: " + error.message);
+            }
+        }
+
+        // ==========================================
+        // Web Serial Configurator (USB)
+        // ==========================================
+        async function connectAndSyncSerial() {
+            try {
+                const major = document.getElementById('bt-input-major').value;
+                const minor = document.getElementById('bt-input-minor').value;
+                
+                if (!major || !minor) {
+                    alert("กรุณาระบุรหัส Major และ Minor ให้ครบถ้วน");
+                    return;
+                }
+
+                // ขอสิทธิ์เชื่อมต่อพอร์ต USB (COM Port)
+                const port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 115200 });
+                
+                let cmd = `SERIAL_SET:M=${major},N=${minor}\n`;
+
+                // --- บันทึกข้อมูลลงโหนดทันที ก่อนส่งเข้าบอร์ด ---
+                if (currentEditingNodeIdForBT && customNodes[currentEditingNodeIdForBT]) {
+                    customNodes[currentEditingNodeIdForBT].beaconMajor = parseInt(major);
+                    customNodes[currentEditingNodeIdForBT].beaconMinor = parseInt(minor);
+                    
+                    saveStateToHistory();
+                    autoSaveToLocalStorage();
+                    renderAllElements();
+                }
+
+                // ส่งข้อมูลเข้าบอร์ด
+                const textEncoder = new TextEncoderStream();
+                const writableStreamClosed = textEncoder.readable.pipeTo(port.writable);
+                const writer = textEncoder.writable.getWriter();
+                await writer.write(cmd);
+                writer.close();
+                await writableStreamClosed;
+
+                await port.close();
+                alert(`✅ ซิงค์ข้อมูลและบันทึกลงโหนดสำเร็จ!\n\nบอร์ดได้รับพิกัดเรียบร้อยแล้วและกำลังรีสตาร์ทตัวเอง`);
+                closeEditorCards();
+
+            } catch (error) {
+                console.error(error);
+                if (error.name === 'NotFoundError') {
+                    // ผู้ใช้กดยกเลิก
+                } else if (error.name === 'NotSupportedError') {
+                    alert("เบราว์เซอร์นี้ไม่รองรับ Web Serial API กรุณาใช้ Chrome หรือ Edge บนคอมพิวเตอร์");
+                } else {
+                    alert("เกิดข้อผิดพลาดในการเชื่อมต่อสาย USB:\n" + error.message + "\n\n💡 คำแนะนำ: โปรดตรวจสอบให้แน่ใจว่าได้ปิดหน้าต่าง Serial Monitor ในโปรแกรม Arduino IDE ไปแล้ว เพื่อไม่ให้พอร์ตชนกันครับ");
+                }
+            }
         }
 
         updateScaleBadge();
