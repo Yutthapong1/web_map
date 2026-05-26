@@ -220,6 +220,12 @@ body {
     color: var(--stairs-color);
 }
 
+.chip.active[data-mode="setNorth"] {
+    border-color: #ef4444;
+    background-color: rgba(239, 68, 68, 0.08);
+    color: #ef4444;
+}
+
 /* Sidebar Calibration Widget */
 .sidebar-calib-widget {
     background: #121214;
@@ -637,4 +643,49 @@ body {
 .leaflet-bar a.leaflet-disabled {
     background-color: rgba(39, 39, 42, 0.5) !important;
     color: var(--text-muted) !important;
+}
+
+/* Premium Compass Overlay Styles */
+.compass-dial-container {
+    pointer-events: auto;
+    user-select: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.compass-ring {
+    transition: box-shadow 0.25s ease, border-color 0.25s ease, background 0.25s ease, width 0.3s ease, height 0.3s ease;
+    border: 3px solid rgba(239, 68, 68, 0.7) !important;
+    background: rgba(24, 24, 27, 0.9) !important; /* Premium dark glassmorphism */
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(8px);
+}
+
+.compass-ring:hover {
+    border-color: #ef4444 !important;
+    box-shadow: 0 12px 30px rgba(239, 68, 68, 0.25), 0 10px 25px rgba(0, 0, 0, 0.6);
+}
+
+.compass-needle {
+    transform-origin: center center;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+    transition: width 0.3s ease, height 0.3s ease;
+}
+
+.compass-ring span {
+    font-family: 'Segoe UI', -apple-system, sans-serif;
+    user-select: none;
+}
+
+.compass-dial-container.minimized {
+    opacity: 0.55;
+    pointer-events: none !important;
+}
+
+.compass-dial-container.minimized .compass-ring {
+    pointer-events: none !important;
+    border-color: rgba(239, 68, 68, 0.3) !important;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4) !important;
 }

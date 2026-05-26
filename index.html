@@ -58,6 +58,9 @@
                         <div class="chip" data-mode="calibrate" onclick="setMode('calibrate')">
                             <i class="fa-solid fa-ruler-combined"></i> กำหนดขนาดสเกล
                         </div>
+                        <div class="chip" data-mode="setNorth" onclick="setMode('setNorth')">
+                            <i class="fa-solid fa-compass"></i> กำหนดทิศเหนือ
+                        </div>
                         <div class="chip" data-mode="routing" onclick="setMode('routing')">
                             <i class="fa-solid fa-diamond-turn-right"></i> ทดสอบการนำทาง
                         </div>
@@ -369,6 +372,31 @@
                 </div>
             </div>
 
+            <!-- หน้าต่างกำหนดทิศเหนือ (Set North Card) -->
+            <div id="north-card" class="editor-card">
+                <div class="card-header">
+                    <h3><i class="fa-solid fa-compass" style="color: #ef4444;"></i> กำหนดทิศเหนือ</h3>
+                    <button class="btn-close" onclick="closeEditorCards()">&times;</button>
+                </div>
+                <div class="card-body" style="text-align: center;">
+                    <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 15px; line-height: 1.5;">
+                        คลิกตำแหน่งใดก็ได้บนแผนที่เพื่อวางวงแหวนทิศเหนือ<br>จากนั้นคลิกค้างแล้วลากรอบวงกลมเพื่อตั้งค่าทิศเหนือ
+                    </div>
+                    <div style="font-size: 26px; font-weight: bold; color: var(--primary); margin: 20px 0; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                        <i class="fa-solid fa-location-arrow" id="north-card-arrow" style="transform: rotate(0deg); transition: transform 0.1s ease; color: #ef4444;"></i>
+                        <span id="north-angle-text">0°</span>
+                    </div>
+                    <div class="form-group" style="text-align: left;">
+                        <label>ตั้งค่ามุมองศา (0 - 359°)</label>
+                        <input type="number" id="north-angle-input" min="0" max="359" class="form-control" value="0" oninput="updateNorthAngleFromInput(this.value)">
+                    </div>
+                </div>
+                <div class="card-footer" style="display: flex; gap: 8px;">
+                    <button class="btn btn-secondary" onclick="resetNorthAngle()" style="flex: 1;">รีเซ็ต (0°)</button>
+                    <button class="btn btn-primary" onclick="closeEditorCards(); setMode('addAndDrag')" style="flex: 1;">เสร็จสิ้น</button>
+                </div>
+            </div>
+
             <!-- หน้าต่างทดสอบค้นหาเส้นทาง -->
             <div id="routing-card" class="editor-card">
                 <div class="card-header">
@@ -431,6 +459,11 @@
             3: ''
         };
 
+        // ทิศเหนือของแผนที่ (North Direction Configuration)
+        let mapNorthAngle = 0; // มุมองศา 0-359
+        let northCompassPos = null; // ตำแหน่ง { x, y, floor } สำหรับวาดรูปเข็มทิศบนแผนที่
+        let northCompassMarker = null; // เก็บ Leaflet Marker ตัวจริงของเข็มทิศ
+
         // Calibration state
         let calibrationPoints = [];
         let calibrationTempMarkerStart = null;
@@ -479,6 +512,9 @@
             if (mode === 'calibrate') {
                 document.getElementById('calibration-card').style.display = 'block';
                 showCalibrationCard(true);
+            } else if (mode === 'setNorth') {
+                document.getElementById('north-card').style.display = 'block';
+                updateNorthUI();
             }
 
             renderAllElements();
@@ -664,6 +700,19 @@
                             Object.assign(floorImages, importedData.floorImages);
                         }
 
+                        // โหลดข้อมูลทิศเหนือ (ถ้ามีในไฟล์)
+                        if (importedData.mapNorthAngle !== undefined) {
+                            mapNorthAngle = parseFloat(importedData.mapNorthAngle) || 0;
+                        } else {
+                            mapNorthAngle = 0;
+                        }
+
+                        if (importedData.northCompassPos !== undefined) {
+                            northCompassPos = importedData.northCompassPos;
+                        } else {
+                            northCompassPos = null;
+                        }
+
                         // ตรวจสอบความเข้ากันได้ย้อนหลัง (ผูกชั้น 1 เป็นค่าเริ่มต้นหากโหนดเก่าไม่มีคีย์ชั้น)
                         Object.keys(customNodes).forEach(id => {
                             if (customNodes[id].floor === undefined) {
@@ -681,7 +730,7 @@
                         autoSaveToLocalStorage();
                         
                         switchFloor(1); // บังคับสวิตช์มาแสดงชั้น 1 ก่อน
-                        alert("🎉 นำเข้าข้อมูลสำเร็จรวดเดียว!\n\nโหลดข้อมูลรูปภาพแผนที่ (Base64), ตำแหน่งหมุด, การเชื่อมโยงข้ามชั้น, และสเกล กลับมาสมบูรณ์ครบถ้วนในไฟล์เดียวครับ");
+                        alert("🎉 นำเข้าข้อมูลสำเร็จรวดเดียว!\n\nโหลดข้อมูลรูปภาพแผนที่ (Base64), ตำแหน่งหมุด, การเชื่อมโยงข้ามชั้น, สเกล และทิศเหนือ กลับมาสมบูรณ์ครบถ้วนในไฟล์เดียวครับ");
                     } else {
                         alert("⚠️ รูปแบบไฟล์ JSON ไม่ถูกต้อง");
                     }
@@ -713,6 +762,12 @@
             routingStartNodeId = null;
             routingEndNodeId = null;
             selectedNodeForEdge = null;
+            mapNorthAngle = 0;
+            northCompassPos = null;
+            if (northCompassMarker) {
+                map.removeLayer(northCompassMarker);
+                northCompassMarker = null;
+            }
 
             // ลบ Markers และ Polylines เดิมออกจากแผนที่
             Object.values(markersMap).forEach(m => map.removeLayer(m));
@@ -752,7 +807,9 @@
                 floorImages: floorImages,
                 nodes: customNodes,
                 edges_adjacency_list: edgeMap,
-                raw_edges: customEdges
+                raw_edges: customEdges,
+                mapNorthAngle: mapNorthAngle,
+                northCompassPos: northCompassPos
             };
 
             const jsonString = JSON.stringify(exportData, null, 2);
@@ -767,7 +824,7 @@
             document.body.removeChild(downloadAnchor);
             URL.revokeObjectURL(url);
 
-            alert("💾 บันทึกและส่งออกแผนที่สำเร็จ!\n\nไฟล์ข้อมูลนำทางอัจฉริยะ 'indoor_map_data.json' ได้รับการส่งออกแล้ว \nระบบได้แพ็ครวม **รูปภาพแผนที่ของทุกชั้น (Base64), พิกัดโหนด, และสเกล** ไว้เป็นก้อนเดียวกันอย่างสมบูรณ์แบบ \nคุณสามารถนำไฟล์นี้ไป Import กลับเข้าเว็บได้รวดเดียวเลยครับ!");
+            alert("💾 บันทึกและส่งออกแผนที่สำเร็จ!\n\nไฟล์ข้อมูลนำทางอัจฉริยะ 'indoor_map_data.json' ได้รับการส่งออกแล้ว \nระบบได้แพ็ครวม **รูปภาพแผนที่ของทุกชั้น (Base64), พิกัดโหนด, ทิศเหนือ และสเกล** ไว้เป็นก้อนเดียวกันอย่างสมบูรณ์แบบ \nคุณสามารถนำไฟล์นี้ไป Import กลับเข้าเว็บได้รวดเดียวเลยครับ!");
         }
 
         function deleteEdgeByIndex(index) {
@@ -781,7 +838,9 @@
             const state = {
                 nodes: JSON.parse(JSON.stringify(customNodes)),
                 edges: JSON.parse(JSON.stringify(customEdges)),
-                metersPerUnit: metersPerUnit
+                metersPerUnit: metersPerUnit,
+                mapNorthAngle: mapNorthAngle,
+                northCompassPos: northCompassPos ? JSON.parse(JSON.stringify(northCompassPos)) : null
             };
             historyStack.push(state);
             if(historyStack.length > maxHistory) {
@@ -797,6 +856,8 @@
                 customNodes = JSON.parse(JSON.stringify(prevState.nodes));
                 customEdges = JSON.parse(JSON.stringify(prevState.edges));
                 metersPerUnit = prevState.metersPerUnit;
+                mapNorthAngle = prevState.mapNorthAngle !== undefined ? prevState.mapNorthAngle : 0;
+                northCompassPos = prevState.northCompassPos !== undefined ? prevState.northCompassPos : null;
                 isCalibrated = metersPerUnit !== 1.0;
                 
                 renderAllElements();
@@ -812,7 +873,9 @@
                 studio_version: "2.3-Pro-MultiFloor",
                 metersPerUnit: metersPerUnit,
                 nodes: customNodes,
-                edges: customEdges
+                edges: customEdges,
+                mapNorthAngle: mapNorthAngle,
+                northCompassPos: northCompassPos
             };
             localStorage.setItem('indoorMapAutoSave', JSON.stringify(exportData));
         }
@@ -825,6 +888,8 @@
                     customNodes = data.nodes || {};
                     customEdges = data.edges || [];
                     metersPerUnit = data.metersPerUnit || 1.0;
+                    mapNorthAngle = data.mapNorthAngle !== undefined ? data.mapNorthAngle : 0;
+                    northCompassPos = data.northCompassPos !== undefined ? data.northCompassPos : null;
                     
                     document.getElementById('startup-overlay').style.display = 'none';
                     isCalibrated = metersPerUnit !== 1.0;
@@ -1063,6 +1128,73 @@
                     routeCard.style.display = 'none';
                 }
             }
+
+            // วาดเข็มทิศระบุทิศเหนือ (Compass Dial)
+            if (northCompassMarker) {
+                map.removeLayer(northCompassMarker);
+                northCompassMarker = null;
+            }
+
+            if (northCompassPos && northCompassPos.floor === currentFloor) {
+                const pos = toLatLng(northCompassPos.x, northCompassPos.y);
+                const isSetNorthMode = (currentMode === 'setNorth');
+                const size = isSetNorthMode ? 100 : 40;
+                const halfSize = size / 2;
+
+                const compassHtml = `
+                    <div class="compass-dial-container ${isSetNorthMode ? '' : 'minimized'}" style="width: ${size}px; height: ${size}px; position: relative;">
+                        <!-- วงแหวนเข็มทิศ -->
+                        <div class="compass-ring" id="map-compass-ring" style="width: ${size}px; height: ${size}px; border-radius: 50%; display: flex; align-items: center; justify-content: center; position: absolute; top: 0; left: 0; cursor: ${isSetNorthMode ? 'grab' : 'default'};">
+                            <!-- ป้ายแสดงทิศ -->
+                            <span style="position: absolute; top: ${isSetNorthMode ? '4px' : '2px'}; font-size: ${isSetNorthMode ? '11px' : '6px'}; font-weight: bold; color: #ef4444; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">N</span>
+                            <span style="position: absolute; right: 6px; font-size: 8px; font-weight: bold; color: var(--text-muted); display: ${isSetNorthMode ? 'block' : 'none'};">E</span>
+                            <span style="position: absolute; bottom: 4px; font-size: 8px; font-weight: bold; color: var(--text-muted); display: ${isSetNorthMode ? 'block' : 'none'};">S</span>
+                            <span style="position: absolute; left: 6px; font-size: 8px; font-weight: bold; color: var(--text-muted); display: ${isSetNorthMode ? 'block' : 'none'};">W</span>
+                            
+                            <!-- เข็มชี้ (Needle) -->
+                            <div class="compass-needle" style="width: ${isSetNorthMode ? '6px' : '3px'}; height: ${isSetNorthMode ? '70px' : '28px'}; position: relative; display: flex; flex-direction: column; align-items: center; transform: rotate(${mapNorthAngle}deg); transition: transform 0.05s ease;">
+                                <!-- เข็มแดงทิศเหนือ -->
+                                <div style="width: 0; height: 0; border-left: ${isSetNorthMode ? '5px' : '2.5px'} solid transparent; border-right: ${isSetNorthMode ? '5px' : '2.5px'} solid transparent; border-bottom: ${isSetNorthMode ? '30px' : '12px'} solid #ef4444; margin-bottom: ${isSetNorthMode ? '2px' : '1px'};"></div>
+                                <!-- เข็มเงินทิศใต้ -->
+                                <div style="width: 0; height: 0; border-left: ${isSetNorthMode ? '5px' : '2.5px'} solid transparent; border-right: ${isSetNorthMode ? '5px' : '2.5px'} solid transparent; border-top: ${isSetNorthMode ? '30px' : '12px'} solid #a1a1aa;"></div>
+                            </div>
+                            
+                            <!-- หมุดตรงกลาง -->
+                            <div style="width: ${isSetNorthMode ? '10px' : '4px'}; height: ${isSetNorthMode ? '10px' : '4px'}; background: #f4f4f5; border-radius: 50%; border: ${isSetNorthMode ? '2px' : '1px'} solid #ef4444; position: absolute; z-index: 10;"></div>
+                        </div>
+                    </div>
+                `;
+
+                const compassIcon = L.divIcon({
+                    className: 'compass-dial-wrapper',
+                    html: compassHtml,
+                    iconSize: [size, size],
+                    iconAnchor: [halfSize, halfSize]
+                });
+
+                northCompassMarker = L.marker(pos, { 
+                    icon: compassIcon, 
+                    draggable: isSetNorthMode,
+                    interactive: isSetNorthMode
+                }).addTo(map);
+
+                // หากลากตัวเข็มทิศในแผนที่
+                northCompassMarker.on('dragend', (event) => {
+                    const newPos = event.target.getLatLng();
+                    const coords = toXY(newPos);
+                    northCompassPos.x = Math.max(0, Math.min(MAP_WIDTH, coords.x));
+                    northCompassPos.y = Math.max(0, Math.min(MAP_HEIGHT, coords.y));
+                    
+                    saveStateToHistory();
+                    autoSaveToLocalStorage();
+                    renderAllElements();
+                });
+
+                // ผูกอีเวนต์หมุนเข็มทิศ
+                setTimeout(() => {
+                    setupCompassDragEvents();
+                }, 50);
+            }
         }
 
         map.on('click', (e) => {
@@ -1073,6 +1205,8 @@
                 openCreateCard(coords.x, coords.y);
             } else if (currentMode === 'calibrate') {
                 handleCalibrationClick(coords.x, coords.y);
+            } else if (currentMode === 'setNorth') {
+                handleSetNorthClick(coords.x, coords.y);
             } else if (currentMode === 'quickPath') {
                 if (selectedNodeForEdge) {
                     const newId = `wp_${Date.now()}`;
@@ -1103,10 +1237,139 @@
             document.getElementById('calibration-card').style.display = 'none';
             document.getElementById('floor-settings-card').style.display = 'none';
             document.getElementById('bt-configurator-card').style.display = 'none';
+            document.getElementById('north-card').style.display = 'none';
 
             if (currentMode !== 'calibrate') {
                 resetCalibration();
             }
+        }
+
+        // ==========================================
+        // Set North Direction (กำหนดทิศเหนือ)
+        // ==========================================
+        function handleSetNorthClick(x, y) {
+            northCompassPos = { x: x, y: y, floor: currentFloor };
+            
+            saveStateToHistory();
+            autoSaveToLocalStorage();
+            renderAllElements();
+            
+            // เปิดแสดงแผงควบคุมทิศเหนือ
+            document.getElementById('north-card').style.display = 'block';
+            updateNorthUI();
+        }
+
+        function updateNorthUI() {
+            // หมุนหัวลูกศรในแผงควบคุม
+            const arrow = document.getElementById('north-card-arrow');
+            const text = document.getElementById('north-angle-text');
+            const input = document.getElementById('north-angle-input');
+            
+            if (arrow) arrow.style.transform = `rotate(${mapNorthAngle}deg)`;
+            if (text) text.innerText = `${Math.round(mapNorthAngle)}°`;
+            if (input) input.value = Math.round(mapNorthAngle);
+
+            // หมุนเข็มทิศในแผนที่ (ถ้ามีแสดงอยู่)
+            const needle = document.querySelector('.compass-needle');
+            if (needle) {
+                needle.style.transform = `rotate(${mapNorthAngle}deg)`;
+            }
+        }
+
+        function updateNorthAngle(angle) {
+            mapNorthAngle = (Math.round(angle) + 360) % 360;
+            updateNorthUI();
+        }
+
+        function updateNorthAngleFromInput(val) {
+            let angle = parseInt(val);
+            if (isNaN(angle)) return;
+            angle = (angle + 360) % 360;
+            
+            mapNorthAngle = angle;
+            updateNorthUI();
+            
+            saveStateToHistory();
+            autoSaveToLocalStorage();
+        }
+
+        function resetNorthAngle() {
+            mapNorthAngle = 0;
+            updateNorthUI();
+            
+            saveStateToHistory();
+            autoSaveToLocalStorage();
+        }
+
+        function setupCompassDragEvents() {
+            const ring = document.getElementById('map-compass-ring');
+            if (!ring) return;
+
+            let isDraggingAngle = false;
+
+            function calculateAngle(e) {
+                const rect = ring.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+
+                let clientX = e.clientX;
+                let clientY = e.clientY;
+
+                if (e.touches && e.touches.length > 0) {
+                    clientX = e.touches[0].clientX;
+                    clientY = e.touches[0].clientY;
+                }
+
+                const dx = clientX - centerX;
+                const dy = clientY - centerY;
+
+                let angleRad = Math.atan2(dy, dx);
+                let angleDeg = angleRad * 180 / Math.PI;
+
+                // ปรับให้ 0 องศาคือขึ้นตรง และหมุนตามเข็มนาฬิกา
+                angleDeg = (angleDeg + 90 + 360) % 360;
+                return angleDeg;
+            }
+
+            function handleStart(e) {
+                if (currentMode !== 'setNorth') return;
+                
+                // ป้องกันไม่ให้แผนที่เลื่อนลาก
+                map.dragging.disable();
+                
+                isDraggingAngle = true;
+                const angle = calculateAngle(e);
+                updateNorthAngle(angle);
+                
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            function handleMove(e) {
+                if (!isDraggingAngle) return;
+                const angle = calculateAngle(e);
+                updateNorthAngle(angle);
+                
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            function handleEnd(e) {
+                if (isDraggingAngle) {
+                    isDraggingAngle = false;
+                    map.dragging.enable();
+                    saveStateToHistory();
+                    autoSaveToLocalStorage();
+                }
+            }
+
+            ring.addEventListener('mousedown', handleStart);
+            window.addEventListener('mousemove', handleMove);
+            window.addEventListener('mouseup', handleEnd);
+
+            ring.addEventListener('touchstart', handleStart, { passive: false });
+            window.addEventListener('touchmove', handleMove, { passive: false });
+            window.addEventListener('touchend', handleEnd);
         }
 
         function openCreateCard(x, y) {
