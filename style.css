@@ -689,3 +689,163 @@ body {
     border-color: rgba(239, 68, 68, 0.3) !important;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4) !important;
 }
+
+/* ==========================================================================
+   Premium Glassmorphic Modals & Startup Overlays (Apple & Figma Vibe)
+   ========================================================================== */
+.modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(9, 9, 11, 0.8) !important;
+    backdrop-filter: blur(12px) !important;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.premium-modal-card {
+    background: #18181b !important;
+    border-radius: 20px !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6) !important;
+    padding: 32px !important;
+    position: relative;
+    color: var(--text-main) !important;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+}
+
+#startup-overlay .premium-modal-card {
+    width: 520px;
+    max-width: 92%;
+    text-align: center;
+}
+
+#fresh-map-modal .premium-modal-card,
+#export-modal .premium-modal-card,
+#save-local-modal .premium-modal-card {
+    width: 440px;
+    max-width: 92%;
+    text-align: left;
+}
+
+/* Modal text elements and headers in dark mode */
+.modal-title-group {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 16px;
+}
+
+.modal-icon-badge {
+    width: 46px;
+    height: 46px;
+    background: rgba(59, 130, 246, 0.1) !important;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary) !important;
+    font-size: 20px;
+}
+
+.modal-title-text h3 {
+    margin: 0;
+    color: var(--text-main) !important;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.modal-title-text p {
+    margin: 3px 0 0;
+    color: var(--text-muted) !important;
+    font-size: 12px;
+}
+
+.modal-overlay .btn-close {
+    position: absolute !important;
+    top: 18px !important;
+    right: 22px !important;
+    font-size: 24px !important;
+    border: none !important;
+    background: transparent !important;
+    cursor: pointer !important;
+    color: var(--text-muted) !important;
+    transition: color 0.2s, transform 0.2s;
+    line-height: 1;
+}
+
+.modal-overlay .btn-close:hover {
+    color: var(--text-main) !important;
+    transform: scale(1.1);
+}
+
+/* Custom modal input controls */
+.modal-overlay .form-group label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.75px;
+}
+
+.modal-overlay .form-control {
+    width: 100%;
+    padding: 11px 14px;
+    border: 1px solid var(--border-color) !important;
+    background-color: rgba(9, 9, 11, 0.7) !important;
+    color: var(--text-main) !important;
+    border-radius: 8px !important;
+    font-size: 13px !important;
+    box-sizing: border-box;
+    outline: none;
+    transition: all 0.25s ease;
+}
+
+.modal-overlay .form-control:focus {
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
+}
+
+.modal-overlay .btn-secondary {
+    background: #27272a !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-main) !important;
+}
+
+.modal-overlay .btn-secondary:hover {
+    background: #3f3f46 !important;
+    border-color: #52525b !important;
+}
+
+.modal-overlay .btn-primary {
+    background: var(--primary) !important;
+    border: 1px solid var(--primary-dark) !important;
+    color: white !important;
+}
+
+.modal-overlay .btn-primary:hover {
+    background: var(--primary-dark) !important;
+}
+
+/* Tool Group Title styling for Sidebar */
+.tool-group-title {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin: 12px 0 6px 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.75px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
